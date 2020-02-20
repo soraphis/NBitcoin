@@ -894,7 +894,7 @@ namespace NBitcoin.Secp256k1
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
 
-		public bool Equals(in Scalar b)
+		public bool Equals(Scalar b)
 		{
 			ref readonly Scalar a = ref this;
 			return ((a.d0 ^ b.d0) | (a.d1 ^ b.d1) | (a.d2 ^ b.d2) | (a.d3 ^ b.d3) | (a.d4 ^ b.d4) | (a.d5 ^ b.d5) | (a.d6 ^ b.d6) | (a.d7 ^ b.d7)) == 0;
