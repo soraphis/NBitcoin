@@ -11,16 +11,27 @@ namespace NBitcoin.Tests
 		Scalar One = new Scalar(1, 0, 0, 0, 0, 0, 0, 0);
 		Scalar Two = new Scalar(2, 0, 0, 0, 0, 0, 0, 0);
 		Scalar Three = new Scalar(3, 0, 0, 0, 0, 0, 0, 0);
+		Scalar Six = new Scalar(6, 0, 0, 0, 0, 0, 0, 0);
+		Scalar Nine = new Scalar(9, 0, 0, 0, 0, 0, 0, 0);
 		Scalar OneToEight = new Scalar(1, 2, 3, 4, 5, 6, 7, 8);
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
-		public void CanAddScalar()
+		public void CanDoBasicScalarOperations()
 		{
 			var actual = One + Two;
 			Assert.Equal(Three, actual);
 
 			var expected = new Scalar(2, 4, 6, 8, 10, 12, 14, 16);
 			Assert.Equal(expected, OneToEight + OneToEight);
+
+			actual = Three.Sqr();
+			Assert.Equal(Nine, actual);
+
+			actual = Two * Three;
+			Assert.Equal(Six, actual);
+			var inv = Six.Inverse();
+			actual = inv * Six;
+			Assert.Equal(One, actual);
 		}
 
 		[Fact]
@@ -90,9 +101,15 @@ namespace NBitcoin.Tests
 				if (!s.IsZero)
 				{
 					var inv = s.Inverse();
+					inv = inv * s;
+					/* Multiplying a scalar with its inverse must result in one. */
+					Assert.True(inv.IsOne);
+					inv = inv.Inverse();
+					/* Inverting one must result in one. */
+					Assert.True(inv.IsOne);
 				}
 			}
-
+		}
 		Scalar random_scalar_order_test()
 		{
 			Scalar scalar = Scalar.Zero;
@@ -173,3 +190,4 @@ namespace NBitcoin.Tests
 		}
 	}
 }
+
