@@ -4,7 +4,7 @@ using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	readonly struct Scalar
+	readonly struct Scalar : IEquatable<Scalar>
 	{
 		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
 		static void muladd(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
@@ -893,6 +893,22 @@ namespace NBitcoin.Secp256k1
 			d7 = (uint)(t & nonzero);
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
+
+		public bool Equals(in Scalar b)
+		{
+			ref readonly Scalar a = ref this;
+			return ((a.d0 ^ b.d0) | (a.d1 ^ b.d1) | (a.d2 ^ b.d2) | (a.d3 ^ b.d3) | (a.d4 ^ b.d4) | (a.d5 ^ b.d5) | (a.d6 ^ b.d6) | (a.d7 ^ b.d7)) == 0;
+		}
+
+		public static bool operator ==(in Scalar a, in Scalar b)
+		{
+			return a.Equals(b);
+		}
+		public static bool operator !=(in Scalar a, in Scalar b)
+		{
+			return !a.Equals(b);
+		}
+
 		public static Scalar operator +(in Scalar a, in Scalar b)
 		{
 			return a.Add(b);
