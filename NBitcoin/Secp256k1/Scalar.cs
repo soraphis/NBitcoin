@@ -109,7 +109,7 @@ namespace NBitcoin.Secp256k1
 			d6 = (uint)t; t >>= 32;
 			t += (ulong)a.d7 + b.d7;
 			d7 = (uint)t; t >>= 32;
-			overflow = (int)(t + (uint)CheckOverflow());
+			overflow = (int)(t + (uint)new Scalar(d0, d1, d2, d3, d4, d5, d6, d7).CheckOverflow());
 			VERIFY_CHECK(overflow == 0 || overflow == 1);
 			Reduce(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, overflow);
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
@@ -860,6 +860,37 @@ namespace NBitcoin.Secp256k1
 			Span<uint> l = stackalloc uint[16];
 			mul_512(l, this, b);
 			reduce_512(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, l);
+			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
+		}
+
+		public readonly Scalar Negate()
+		{
+			uint d0;
+			uint d1;
+			uint d2;
+			uint d3;
+			uint d4;
+			uint d5;
+			uint d6;
+			uint d7;
+			ref readonly Scalar a = ref this;
+			uint nonzero = 0xFFFFFFFFU * (a.IsZero ? 0U : 1);
+			ulong t = (ulong)(~a.d0) + SECP256K1_N_0 + 1;
+			d0 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(~a.d1) + SECP256K1_N_1;
+			d1 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(~a.d2) + SECP256K1_N_2;
+			d2 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(~a.d3) + SECP256K1_N_3;
+			d3 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(~a.d4) + SECP256K1_N_4;
+			d4 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(~a.d5) + SECP256K1_N_5;
+			d5 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(~a.d6) + SECP256K1_N_6;
+			d6 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(~a.d7) + SECP256K1_N_7;
+			d7 = (uint)(t & nonzero);
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
 		public static Scalar operator +(in Scalar a, in Scalar b)
