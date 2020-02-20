@@ -11,8 +11,8 @@ namespace NBitcoin.Secp256k1
 	}
 	readonly struct Scalar
 	{
-		static Scalar _Zero = new Scalar(0, 0, 0, 0, 0, 0, 0, 0);
-		public static ref Scalar Zero => ref _Zero;
+		static readonly Scalar _Zero = new Scalar(0, 0, 0, 0, 0, 0, 0, 0);
+		public static ref readonly Scalar Zero => ref _Zero;
 
 		const uint SECP256K1_N_0 = 0xD0364141U;
 		const uint SECP256K1_N_1 = 0xBFD25E8CU;
