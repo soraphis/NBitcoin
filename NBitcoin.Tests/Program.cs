@@ -10,8 +10,7 @@
 //	{
 //		public static void Main()
 //		{
-//			//new spv_tests().CanSyncWallet();
-//			//RepositoryTests.Play();
+//			new Secp256k1Tests().run_scalar_tests();
 //		}
 //	}
 //}

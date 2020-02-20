@@ -14,6 +14,8 @@ namespace NBitcoin.Tests
 		Scalar Six = new Scalar(6, 0, 0, 0, 0, 0, 0, 0);
 		Scalar Nine = new Scalar(9, 0, 0, 0, 0, 0, 0, 0);
 		Scalar OneToEight = new Scalar(1, 2, 3, 4, 5, 6, 7, 8);
+		static int count = 64;
+
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
 		public void CanDoBasicScalarOperations()
@@ -46,7 +48,15 @@ namespace NBitcoin.Tests
 
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
-		public void scalar_test()
+		public void run_scalar_tests()
+		{
+			int i;
+			for (i = 0; i < 128 * count; i++)
+			{
+				scalar_test();
+			}
+		}
+		void scalar_test()
 		{
 			Span<byte> c = stackalloc byte[32];
 			var s = random_scalar_order_test();
@@ -109,13 +119,106 @@ namespace NBitcoin.Tests
 					Assert.True(inv.IsOne);
 				}
 			}
+
+			{
+				/* Test commutativity of add. */
+				Scalar r1 = s1 + s2;
+				Scalar r2 = s2 + s1;
+				Assert.Equal(r1, r2);
+			}
+
+			{
+				int i;
+				/* Test add_bit. */
+				uint bit = secp256k1_rand_bits(8);
+				Scalar b = new Scalar(1);
+				Assert.True(b.IsOne);
+				for (i = 0; i < bit; i++)
+				{
+					b = b + b;
+				}
+				Scalar r1 = s1;
+				Scalar r2 = s1;
+				r1 = r1.Add(b, out var overflow);
+				if (overflow == 0)
+				{
+					/* No overflow happened. */
+					r2 = r2.CAddBit(bit, 1);
+					Assert.Equal(r1, r2);
+					/* cadd is a noop when flag is zero */
+					r2 = r2.CAddBit(bit, 0);
+					Assert.Equal(r1, r2);
+				}
+			}
+			{
+				/* Test commutativity of mul. */
+				Scalar r1 = s1 * s2;
+				Scalar r2 = s2 * s1;
+				Assert.Equal(r1, r2);
+			}
+
+			{
+				/* Test associativity of add. */
+				Scalar r1 = s1 + s2;
+				r1 = r1 + s;
+				Scalar r2 = s2 + s;
+				r2 = s1 + r2;
+				Assert.Equal(r1, r2);
+			}
+
+			{
+				/* Test associativity of mul. */
+				Scalar r1 = s1 * s2;
+				r1 = r1 * s;
+				Scalar r2 = s2 * s;
+				r2 = s1 * r2;
+				Assert.Equal(r1, r2);
+			}
+
+			{
+				/* Test distributitivity of mul over add. */
+				Scalar r1 = s1 + s2;
+				r1 = r1 * s;
+				Scalar r2 = s1 * s;
+				Scalar t = s2 * s;
+				r2 = r2 + t;
+				Assert.Equal(r1, r2);
+			}
+
+			{
+				/* Test square. */
+				Scalar r1 = s1.Sqr();
+				Scalar r2 = s1 * s1;
+				Assert.Equal(r1, r2);
+			}
+
+			{
+				/* Test multiplicative identity. */
+				Scalar v1 = new Scalar(1);
+				Scalar r1 = s1 * v1;
+				Assert.Equal(r1, s1);
+			}
+
+			{
+				/* Test additive identity. */
+				Scalar v0 = new Scalar(0);
+				Scalar r1 = s1 + v0;
+				Assert.Equal(r1, s1);
+			}
+
+			{
+				/* Test zero product property. */
+				Scalar v0 = new Scalar(0);
+				Scalar r1 = s1 * v0;
+				Assert.Equal(r1, v0);
+			}
 		}
 		Scalar random_scalar_order_test()
 		{
 			Scalar scalar = Scalar.Zero;
+			Span<byte> output = stackalloc byte[32];
 			do
 			{
-				Span<byte> output = stackalloc byte[32];
 				RandomUtils.GetBytes(output);
 				scalar = new Scalar(output, out int overflow);
 				if (overflow != 0 || scalar.IsZero)
