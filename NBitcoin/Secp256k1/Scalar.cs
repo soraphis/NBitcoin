@@ -651,8 +651,23 @@ namespace NBitcoin.Secp256k1
 			d7 = this.d7;
 		}
 
-		public readonly bool IsZero => (d0 | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
-		public readonly bool IsOne => ((d0 ^ 1) | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
+
+		public readonly bool IsZero
+		{
+			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+			get
+			{
+				return (d0 | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
+			}
+		}
+		public readonly bool IsOne
+		{
+			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+			get
+			{
+				return ((d0 ^ 1) | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
+			}
+		}
 
 		public readonly Scalar Sqr()
 		{
@@ -886,12 +901,13 @@ namespace NBitcoin.Secp256k1
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
 
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
 		public readonly bool Equals(Scalar b)
 		{
 			ref readonly Scalar a = ref this;
 			return ((a.d0 ^ b.d0) | (a.d1 ^ b.d1) | (a.d2 ^ b.d2) | (a.d3 ^ b.d3) | (a.d4 ^ b.d4) | (a.d5 ^ b.d5) | (a.d6 ^ b.d6) | (a.d7 ^ b.d7)) == 0;
 		}
-
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
 		public readonly override bool Equals(object obj)
 		{
 			if (obj is Scalar b)

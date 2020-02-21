@@ -1050,6 +1050,7 @@ namespace NBitcoin.Secp256k1
 
 		public readonly bool IsZero
 		{
+			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
 			get
 			{
 				VERIFY_CHECK(normalized);
@@ -1081,6 +1082,98 @@ namespace NBitcoin.Secp256k1
 			return result;
 		}
 
+		public readonly FieldElement NormalizeWeak()
+		{
+			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
+			uint t0 = n0, t1 = n1, t2 = n2, t3 = n3, t4 = n4,
+			t5 = n5, t6 = n6, t7 = n7, t8 = n8, t9 = n9;
+
+			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
+			uint x = t9 >> 22; t9 &= 0x03FFFFFU;
+
+			/* The first pass ensures the magnitude is 1, ... */
+			t0 += x * 0x3D1U; t1 += (x << 6);
+			t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
+			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
+			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU;
+			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU;
+			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU;
+			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU;
+			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU;
+			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU;
+			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU;
+
+			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
+			VERIFY_CHECK(t9 >> 23 == 0);
+
+			n0 = t0; n1 = t1; n2 = t2; n3 = t3; n4 = t4;
+			n5 = t5; n6 = t6; n7 = t7; n8 = t8; n9 = t9;
+			magnitude = 1;
+			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			result.VERIFY();
+			return result;
+		}
+
+		public readonly FieldElement NormalizeVariable()
+		{
+			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
+			uint t0 = n0, t1 = n1, t2 = n2, t3 = n3, t4 = n4,
+			t5 = n5, t6 = n6, t7 = n7, t8 = n8, t9 = n9;
+
+			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
+			uint m;
+			uint x = t9 >> 22; t9 &= 0x03FFFFFU;
+
+			/* The first pass ensures the magnitude is 1, ... */
+			t0 += x * 0x3D1U; t1 += (x << 6);
+			t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
+			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
+			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU; m = t2;
+			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU; m &= t3;
+			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU; m &= t4;
+			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU; m &= t5;
+			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU; m &= t6;
+			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU; m &= t7;
+			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU; m &= t8;
+
+			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
+			VERIFY_CHECK(t9 >> 23 == 0);
+
+			/* At most a single final reduction is needed; check if the value is >= the field characteristic */
+			x = (t9 >> 22) | ((t9 == 0x03FFFFFU ? 1U : 0) & (m == 0x3FFFFFFU ? 1U : 0)
+				& ((t1 + 0x40U + ((t0 + 0x3D1U) >> 26)) > 0x3FFFFFFU ? 1U : 0));
+
+			if (x != 0)
+			{
+				t0 += 0x3D1U; t1 += (x << 6);
+				t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
+				t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
+				t3 += (t2 >> 26); t2 &= 0x3FFFFFFU;
+				t4 += (t3 >> 26); t3 &= 0x3FFFFFFU;
+				t5 += (t4 >> 26); t4 &= 0x3FFFFFFU;
+				t6 += (t5 >> 26); t5 &= 0x3FFFFFFU;
+				t7 += (t6 >> 26); t6 &= 0x3FFFFFFU;
+				t8 += (t7 >> 26); t7 &= 0x3FFFFFFU;
+				t9 += (t8 >> 26); t8 &= 0x3FFFFFFU;
+
+				/* If t9 didn't carry to bit 22 already, then it should have after any final reduction */
+				VERIFY_CHECK(t9 >> 22 == x);
+
+				/* Mask off the possible multiple of 2^256 from the final reduction */
+				t9 &= 0x03FFFFFU;
+			}
+
+			n0 = t0; n1 = t1; n2 = t2; n3 = t3; n4 = t4;
+			n5 = t5; n6 = t6; n7 = t7; n8 = t8; n9 = t9;
+
+			magnitude = 1;
+			normalized = true;
+			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			result.VERIFY();
+			return result;
+		}
+
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Normalize()
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
@@ -1213,6 +1306,13 @@ namespace NBitcoin.Secp256k1
 		}
 
 		public readonly bool Equals(FieldElement b)
+		{
+			ref readonly FieldElement a = ref this;
+			var na = a.Negate(1);
+			na += b;
+			return na.NormalizesToZero();
+		}
+		public readonly bool EqualsVariable(in FieldElement b)
 		{
 			ref readonly FieldElement a = ref this;
 			var na = a.Negate(1);

@@ -153,11 +153,20 @@ namespace NBitcoin.Tests
 			return ns;
 		}
 
+		private void check_fe_equal(FieldElement a, FieldElement b)
+		{
+			FieldElement an = a.NormalizeWeak();
+			FieldElement bn = b.NormalizeVariable();
+			Assert.Equal(an, bn);
+
+			FieldElement cn = b.Normalize();
+			Assert.Equal(an, cn);
+		}
 		private void check_fe_inverse(FieldElement a, FieldElement b)
 		{
 			FieldElement one = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
 			FieldElement x = a * b;
-			Assert.Equal(x, one);
+			check_fe_equal(x, one);
 		}
 
 		private FieldElement SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
