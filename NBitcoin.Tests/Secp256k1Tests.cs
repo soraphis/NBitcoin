@@ -26,7 +26,7 @@ namespace NBitcoin.Tests
 			{
 				x = random_fe_non_zero();
 				xi = x.Inverse();
-				
+
 				check_fe_inverse(x, xi);
 				xii = xi.Inverse();
 				Assert.Equal(x, xii);
@@ -52,6 +52,107 @@ namespace NBitcoin.Tests
 			}
 		}
 
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_field_convert()
+		{
+			byte[] b32 = new byte[]{
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+		0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+		0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
+		0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x40
+	};
+			FieldElementStorage fes = SECP256K1_FE_STORAGE_CONST(
+				0x00010203U, 0x04050607U, 0x11121314U, 0x15161718U,
+				0x22232425U, 0x26272829U, 0x33343536U, 0x37383940U
+			);
+			FieldElement fe = SECP256K1_FE_CONST(
+				0x00010203U, 0x04050607U, 0x11121314U, 0x15161718U,
+				0x22232425U, 0x26272829U, 0x33343536U, 0x37383940U
+			);
+			FieldElement fe2;
+			Span<byte> b322 = stackalloc byte[32];
+			FieldElementStorage fes2;
+			/* Check conversions to fe. */
+			Assert.True(FieldElement.TryCreate(b32, out fe2));
+			Assert.Equal(fe, fe2);
+			fe2 = fes.ToFieldElement();
+			Assert.Equal(fe, fe2);
+			/* Check conversion from fe. */
+			fe.WriteToSpan(b322);
+			AssertEx.CollectionEquals(b322.ToArray(), b32);
+			fes2 = fe.ToStorage();
+			Assert.Equal(fes, fes2);
+		}
+
+		void test_sqrt(in FieldElement a, FieldElement? k)
+		{
+			FieldElement r2;
+			bool v = a.Sqrt(out FieldElement r1);
+			Assert.True(!v == (k is null));
+
+			if (!(k is null))
+			{
+				/* Check that the returned root is +/- the given known answer */
+				r2 = r1.Negate(1);
+				r1 += k.Value;
+				r2 += k.Value;
+				r1 = r1.Normalize();
+				r2 = r2.Normalize();
+				Assert.True(r1.IsZero || r2.IsZero);
+			}
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_sqrt()
+		{
+			FieldElement ns, x, s, t;
+			int i;
+
+			/* Check sqrt(0) is 0 */
+			x = new FieldElement(0);
+			s = x.Sqr();
+			test_sqrt(s, x);
+
+			/* Check sqrt of small squares (and their negatives) */
+			for (i = 1; i <= 100; i++)
+			{
+				x = new FieldElement((uint)i);
+				s = x.Sqr();
+				test_sqrt(s, x);
+				t = s.Negate(1);
+				test_sqrt(t, null);
+			}
+
+			/* Consistency checks for large random values */
+			for (i = 0; i < 10; i++)
+			{
+				int j;
+				ns = random_fe_non_square();
+				for (j = 0; j < count; j++)
+				{
+					x = random_fe();
+					s = x.Sqr();
+					test_sqrt(s, x);
+					t = s.Negate(1);
+					test_sqrt(t, null);
+					t = s * ns;
+					test_sqrt(t, null);
+				}
+			}
+		}
+
+		private FieldElement random_fe_non_square()
+		{
+			var ns = random_fe_non_zero();
+			if (ns.Sqrt(out var r))
+			{
+				ns = ns.Negate(1);
+			}
+			return ns;
+		}
+
 		private void check_fe_inverse(FieldElement a, FieldElement b)
 		{
 			FieldElement one = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
@@ -71,6 +172,11 @@ namespace NBitcoin.Tests
 	(((uint)d5) >> 22) | (((uint)(d6) & 0xFFFFU) << 10),
 	(((uint)d6) >> 16) | (((uint)(d7) & 0x3FFU) << 16),
 	(((uint)d7) >> 10), 1, true);
+		}
+
+		private FieldElementStorage SECP256K1_FE_STORAGE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
+		{
+			return new FieldElementStorage(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
 
 		private FieldElement random_fe_non_zero()
@@ -723,7 +829,7 @@ namespace NBitcoin.Tests
 		private byte[] GetArray(byte[,,] chal, int i0, int i1)
 		{
 			byte[] bytes = new byte[chal.GetLength(2)];
-			for(int i = 0; i < bytes.Length; i++)
+			for (int i = 0; i < bytes.Length; i++)
 			{
 				bytes[i] = (byte)chal.GetValue(i0, i1, i);
 			}

@@ -62,6 +62,134 @@ namespace NBitcoin.Secp256k1
 			VERIFY();
 		}
 
+		public readonly bool Sqrt(out FieldElement result)
+		{
+			ref readonly FieldElement a = ref this;
+			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
+			/** Given that p is congruent to 3 mod 4, we can compute the square root of
+			 *  a mod p as the (p+1)/4'th power of a.
+			 *
+			 *  As (p+1)/4 is an even number, it will have the same result for a and for
+			 *  (-a). Only one of these two numbers actually has a square root however,
+			 *  so we test at the end by squaring and comparing to the input.
+			 *  Also because (p+1)/4 is an even number, the computed square root is
+			 *  itself always a square (a ** ((p+1)/4) is the square of a ** ((p+1)/8)).
+			 */
+			FieldElement x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1;
+			int j;
+
+			/** The binary representation of (p + 1)/4 has 3 blocks of 1s, with lengths in
+			 *  { 2, 22, 223 }. Use an addition chain to calculate 2^n - 1 for each block:
+			 *  1, [2], 3, 6, 9, 11, [22], 44, 88, 176, 220, [223]
+			 */
+
+			x2 = a.Sqr();
+			x2 = x2 * a;
+
+			x3 = x2.Sqr();
+			x3 = x3 * a;
+
+			x6 = x3;
+			for (j = 0; j < 3; j++)
+			{
+				x6 = x6.Sqr();
+			}
+			x6 = x6 * x3;
+
+			x9 = x6;
+			for (j = 0; j < 3; j++)
+			{
+				x9 = x9.Sqr();
+			}
+			x9 = x9 * x3;
+
+			x11 = x9;
+			for (j = 0; j < 2; j++)
+			{
+				x11 = x11.Sqr();
+			}
+			x11 = x11 * x2;
+
+			x22 = x11;
+			for (j = 0; j < 11; j++)
+			{
+				x22 = x22.Sqr();
+			}
+			x22 = x22 * x11;
+
+			x44 = x22;
+			for (j = 0; j < 22; j++)
+			{
+				x44 = x44.Sqr();
+			}
+			x44 = x44 * x22;
+
+			x88 = x44;
+			for (j = 0; j < 44; j++)
+			{
+				x88 = x88.Sqr();
+			}
+			x88 = x88 * x44;
+
+			x176 = x88;
+			for (j = 0; j < 88; j++)
+			{
+				x176 = x176.Sqr();
+			}
+			x176 = x176 * x88;
+
+			x220 = x176;
+			for (j = 0; j < 44; j++)
+			{
+				x220 = x220.Sqr();
+			}
+			x220 = x220 * x44;
+
+			x223 = x220;
+			for (j = 0; j < 3; j++)
+			{
+				x223 = x223.Sqr();
+			}
+			x223 = x223 * x3;
+
+			/* The final result is then assembled using a sliding window over the blocks. */
+
+			t1 = x223;
+			for (j = 0; j < 23; j++)
+			{
+				t1 = t1.Sqr();
+			}
+			t1 = t1 * x22;
+			for (j = 0; j < 6; j++)
+			{
+				t1 = t1.Sqr();
+			}
+			t1 = t1 * x2;
+			t1 = t1.Sqr();
+			result = t1.Sqr();
+
+			/* Check that a square root was actually calculated */
+
+			t1 = result.Sqr();
+			return t1.Equals(a);
+		}
+
+		public readonly FieldElementStorage ToStorage()
+		{
+			uint n0, n1, n2, n3, n4, n5, n6, n7;
+			ref readonly FieldElement a = ref this;
+			VERIFY_CHECK(a.normalized);
+			n0 = a.n0 | a.n1 << 26;
+			n1 = a.n1 >> 6 | a.n2 << 20;
+			n2 = a.n2 >> 12 | a.n3 << 14;
+			n3 = a.n3 >> 18 | a.n4 << 8;
+			n4 = a.n4 >> 24 | a.n5 << 2 | a.n6 << 28;
+			n5 = a.n6 >> 4 | a.n7 << 22;
+			n6 = a.n7 >> 10 | a.n8 << 16;
+			n7 = a.n8 >> 16 | a.n9 << 10;
+			return new FieldElementStorage(n0, n1, n2, n3, n4, n5, n6, n7);
+		}
+
 		public readonly FieldElement Inverse()
 		{
 			FieldElement x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1;
