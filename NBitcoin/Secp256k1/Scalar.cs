@@ -191,14 +191,7 @@ namespace NBitcoin.Secp256k1
 
 		internal readonly Scalar CAddBit(uint bit, int flag)
 		{
-			uint d0;
-			uint d1;
-			uint d2;
-			uint d3;
-			uint d4;
-			uint d5;
-			uint d6;
-			uint d7;
+			uint d0, d1, d2, d3, d4, d5, d6, d7;
 			ulong t;
 			VERIFY_CHECK(bit < 256);
 			bit += ((uint)flag - 1) & 0x100;  /* forcing (bit >> 5) > 7 makes this a noop */
@@ -638,19 +631,32 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+		public readonly void Deconstruct(
+			out uint d0,
+			out uint d1,
+			out uint d2,
+			out uint d3,
+			out uint d4,
+			out uint d5,
+			out uint d6,
+			out uint d7)
+		{
+			d0 = this.d0;
+			d1 = this.d1;
+			d2 = this.d2;
+			d3 = this.d3;
+			d4 = this.d4;
+			d5 = this.d5;
+			d6 = this.d6;
+			d7 = this.d7;
+		}
+
 		public readonly bool IsZero => (d0 | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
 		public readonly bool IsOne => ((d0 ^ 1) | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
 
 		public readonly Scalar Sqr()
 		{
-			uint d0 = this.d0;
-			uint d1 = this.d1;
-			uint d2 = this.d2;
-			uint d3 = this.d3;
-			uint d4 = this.d4;
-			uint d5 = this.d5;
-			uint d6 = this.d6;
-			uint d7 = this.d7;
+			var (d0, d1, d2, d3, d4, d5, d6, d7) = this;
 			Span<uint> l = stackalloc uint[16];
 			sqr_512(l, this);
 			reduce_512(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, l);
@@ -849,14 +855,7 @@ namespace NBitcoin.Secp256k1
 		}
 		public Scalar Multiply(in Scalar b)
 		{
-			uint d0 = this.d0;
-			uint d1 = this.d1;
-			uint d2 = this.d2;
-			uint d3 = this.d3;
-			uint d4 = this.d4;
-			uint d5 = this.d5;
-			uint d6 = this.d6;
-			uint d7 = this.d7;
+			var (d0, d1, d2, d3, d4, d5, d6, d7) = this;
 			Span<uint> l = stackalloc uint[16];
 			mul_512(l, this, b);
 			reduce_512(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, l);
@@ -865,14 +864,7 @@ namespace NBitcoin.Secp256k1
 
 		public readonly Scalar Negate()
 		{
-			uint d0;
-			uint d1;
-			uint d2;
-			uint d3;
-			uint d4;
-			uint d5;
-			uint d6;
-			uint d7;
+			uint d0, d1, d2, d3, d4, d5, d6, d7;
 			ref readonly Scalar a = ref this;
 			uint nonzero = 0xFFFFFFFFU * (a.IsZero ? 0U : 1);
 			ulong t = (ulong)(~a.d0) + SECP256K1_N_0 + 1;
@@ -894,10 +886,20 @@ namespace NBitcoin.Secp256k1
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
 
-		public bool Equals(Scalar b)
+		public readonly bool Equals(Scalar b)
 		{
 			ref readonly Scalar a = ref this;
 			return ((a.d0 ^ b.d0) | (a.d1 ^ b.d1) | (a.d2 ^ b.d2) | (a.d3 ^ b.d3) | (a.d4 ^ b.d4) | (a.d5 ^ b.d5) | (a.d6 ^ b.d6) | (a.d7 ^ b.d7)) == 0;
+		}
+
+		public readonly override bool Equals(object obj)
+		{
+			if (obj is Scalar b)
+			{
+				ref readonly Scalar a = ref this;
+				return ((a.d0 ^ b.d0) | (a.d1 ^ b.d1) | (a.d2 ^ b.d2) | (a.d3 ^ b.d3) | (a.d4 ^ b.d4) | (a.d5 ^ b.d5) | (a.d6 ^ b.d6) | (a.d7 ^ b.d7)) == 0;
+			}
+			return false;
 		}
 
 		public static bool operator ==(in Scalar a, in Scalar b)

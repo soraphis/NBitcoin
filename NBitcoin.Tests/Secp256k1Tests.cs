@@ -18,6 +18,62 @@ namespace NBitcoin.Tests
 
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
+		public void run_field_inv()
+		{
+			Field x, xi, xii;
+			int i;
+			for (i = 0; i < 10 * count; i++)
+			{
+				x = random_fe_non_zero();
+				xi = x.Inverse();
+				
+				check_fe_inverse(x, xi);
+				xii = xi.Inverse();
+				Assert.Equal(x, xii);
+			}
+		}
+
+		private void check_fe_inverse(Field a, Field b)
+		{
+			Field one = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+			Field x = a * b;
+			Assert.Equal(x, one);
+		}
+
+		private Field SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
+		{
+			return new Field((d0) & 0x3FFFFFFU,
+	(((uint)d0) >> 26) | (((uint)(d1) & 0xFFFFFU) << 6),
+	(((uint)d1) >> 20) | (((uint)(d2) & 0x3FFFU) << 12),
+	(((uint)d2) >> 14) | (((uint)(d3) & 0xFFU) << 18),
+	(((uint)d3) >> 8) | (((uint)(d4) & 0x3U) << 24),
+	(((uint)d4) >> 2) & 0x3FFFFFFU,
+	(((uint)d4) >> 28) | (((uint)(d5) & 0x3FFFFFU) << 4),
+	(((uint)d5) >> 22) | (((uint)(d6) & 0xFFFFU) << 10),
+	(((uint)d6) >> 16) | (((uint)(d7) & 0x3FFU) << 16),
+	(((uint)d7) >> 10), 1, true);
+		}
+
+		private Field random_fe_non_zero()
+		{
+			Field nz = default;
+			int tries = 10;
+			while (--tries >= 0)
+			{
+				nz = random_fe();
+				nz = nz.Normalize();
+				if (!nz.IsZero)
+				{
+					break;
+				}
+			}
+			/* Infinitesimal probability of spurious failure here */
+			Assert.True(tries >= 0);
+			return nz;
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
 		public void CanDoBasicScalarOperations()
 		{
 			var actual = One + Two;
@@ -889,6 +945,41 @@ namespace NBitcoin.Tests
 			secp256k1_test_rng_integer_bits_left -= bits;
 			ret &= ((~((uint)0)) >> (32 - bits));
 			return ret;
+		}
+
+		Field random_field_element_test()
+		{
+			Field field;
+			Span<byte> output = stackalloc byte[32];
+			do
+			{
+				RandomUtils.GetBytes(output);
+				if (Field.TryCreate(output, out field))
+				{
+					break;
+				}
+			} while (true);
+			return field;
+		}
+
+		private Field random_fe()
+		{
+			Field field;
+			Span<byte> output = stackalloc byte[32];
+			do
+			{
+				secp256k1_rand256(output);
+				if (Field.TryCreate(output, out field))
+				{
+					return field;
+				}
+			} while (true);
+		}
+
+		private void secp256k1_rand256(Span<byte> output)
+		{
+			// Should reproduce the secp256k1_test_rng
+			RandomUtils.GetBytes(output);
 		}
 	}
 }
