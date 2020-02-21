@@ -4,16 +4,24 @@ using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	public readonly struct Field : IEquatable<Field>
+	public readonly struct FieldElement : IEquatable<FieldElement>
 	{
 		readonly uint n0, n1, n2, n3, n4, n5, n6, n7, n8, n9;
 		readonly int magnitude;
 		readonly bool normalized;
 
-		static readonly Field _Zero = new Field(0,0,0,0,0,0,0,0,0,0);
-		public static ref readonly Field Zero => ref _Zero;
+		static readonly FieldElement _Zero = new FieldElement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		public static ref readonly FieldElement Zero => ref _Zero;
 
-		public Field(ReadOnlySpan<byte> bytes)
+		public FieldElement(uint a)
+		{
+			n0 = a;
+			n1 = n2 = n3 = n4 = n5 = n6 = n7 = n8 = n9 = 0;
+			magnitude = 1;
+			normalized = true;
+			VERIFY();
+		}
+		public FieldElement(ReadOnlySpan<byte> bytes)
 		{
 			n0 = (uint)bytes[31] | ((uint)bytes[30] << 8) | ((uint)bytes[29] << 16) | ((uint)(bytes[28] & 0x3) << 24);
 			n1 = (uint)((bytes[28] >> 2) & 0x3f) | ((uint)bytes[27] << 6) | ((uint)bytes[26] << 14) | ((uint)(bytes[25] & 0xf) << 22);
@@ -33,7 +41,7 @@ namespace NBitcoin.Secp256k1
 			normalized = true;
 			VERIFY();
 		}
-		public Field(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9)
+		public FieldElement(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9)
 		{
 			this.n0 = n0;
 			this.n1 = n1;
@@ -54,11 +62,11 @@ namespace NBitcoin.Secp256k1
 			VERIFY();
 		}
 
-		public readonly Field Inverse()
+		public readonly FieldElement Inverse()
 		{
-			Field x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1;
+			FieldElement x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1;
 			int j;
-			ref readonly Field a = ref this;
+			ref readonly FieldElement a = ref this;
 			/** The binary representation of (p - 2) has 5 blocks of 1s, with lengths in
 			 *  { 1, 2, 22, 223 }. Use an addition chain to calculate 2^n - 1 for each block:
 			 *  [1], [2], 3, 6, 9, 11, [22], 44, 88, 176, 220, [223]
@@ -158,7 +166,7 @@ namespace NBitcoin.Secp256k1
 			return a * t1;
 		}
 
-		public readonly Field Sqr()
+		public readonly FieldElement Sqr()
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, _, _) = Zero;
 			int magnitude;
@@ -168,7 +176,7 @@ namespace NBitcoin.Secp256k1
 			secp256k1_fe_sqr_inner(ref n0, ref n1, ref n2, ref n3, ref n4, ref n5, ref n6, ref n7, ref n8, ref n9);
 			magnitude = 1;
 			normalized = false;
-			var r = new Field(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			r.VERIFY();
 			return r;
 		}
@@ -179,7 +187,7 @@ namespace NBitcoin.Secp256k1
 			ulong u0, u1, u2, u3, u4, u5, u6, u7, u8;
 			uint t9, t0, t1, t2, t3, t4, t5, t6, t7;
 			const uint M = 0x3FFFFFFU, R0 = 0x3D10U, R1 = 0x400U;
-			ref readonly Field a = ref this;
+			ref readonly FieldElement a = ref this;
 			VERIFY_BITS(a.n0, 30);
 			VERIFY_BITS(a.n1, 30);
 			VERIFY_BITS(a.n2, 30);
@@ -453,7 +461,7 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(((x) >> (n)) == 0);
 		}
 
-		public readonly Field Multiply(in Field b)
+		public readonly FieldElement Multiply(in FieldElement b)
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, _, _) = Zero;
 			int magnitude;
@@ -465,11 +473,30 @@ namespace NBitcoin.Secp256k1
 			secp256k1_fe_mul_inner(ref n0, ref n1, ref n2, ref n3, ref n4, ref n5, ref n6, ref n7, ref n8, ref n9, b);
 			magnitude = 1;
 			normalized = false;
-			var r = new Field(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			r.VERIFY();
 			return r;
 		}
-		public readonly Field Add(in Field a)
+		public readonly FieldElement Multiply(uint a)
+		{
+			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
+			n0 *= a;
+			n1 *= a;
+			n2 *= a;
+			n3 *= a;
+			n4 *= a;
+			n5 *= a;
+			n6 *= a;
+			n7 *= a;
+			n8 *= a;
+			n9 *= a;
+			magnitude *= (int)a;
+			normalized = false;
+			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			r.VERIFY();
+			return r;
+		}
+		public readonly FieldElement Add(in FieldElement a)
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
 			a.VERIFY();
@@ -485,14 +512,14 @@ namespace NBitcoin.Secp256k1
 			n9 += a.n9;
 			magnitude += a.magnitude;
 			normalized = false;
-			var r = new Field(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			r.VERIFY();
 			return r;
 		}
 
-		private readonly void secp256k1_fe_mul_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9, in Field b)
+		private readonly void secp256k1_fe_mul_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9, in FieldElement b)
 		{
-			ref readonly Field a = ref this;
+			ref readonly FieldElement a = ref this;
 			ulong c, d;
 			ulong u0, u1, u2, u3, u4, u5, u6, u7, u8;
 			uint t9, t1, t0, t2, t3, t4, t5, t6, t7;
@@ -821,7 +848,7 @@ namespace NBitcoin.Secp256k1
 			/* [r9 r8 r7 r6 r5 r4 r3 r2 r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 		}
 
-		public static bool TryCreate(ReadOnlySpan<byte> bytes, out Field field)
+		public static bool TryCreate(ReadOnlySpan<byte> bytes, out FieldElement field)
 		{
 			uint n0, n1, n2, n3, n4, n5, n6, n7, n8, n9;
 			int magnitude;
@@ -843,11 +870,11 @@ namespace NBitcoin.Secp256k1
 			}
 			magnitude = 1;
 			normalized = true;
-			field = new Field(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			field = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			return true;
 		}
 
-		public Field(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9, int magnitude, bool normalized)
+		public FieldElement(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9, int magnitude, bool normalized)
 		{
 			this.n0 = n0;
 			this.n1 = n1;
@@ -903,9 +930,9 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
-		public readonly Field Negate(int m)
+		public readonly FieldElement Negate(int m)
 		{
-			ref readonly Field a = ref this;
+			ref readonly FieldElement a = ref this;
 			VERIFY_CHECK(this.magnitude <= m);
 			VERIFY();
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
@@ -921,12 +948,12 @@ namespace NBitcoin.Secp256k1
 			n9 = (uint)(0x03FFFFFUL * 2 * (uint)(m + 1) - a.n9);
 			magnitude = m + 1;
 			normalized = false;
-			var result = new Field(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			result.VERIFY();
 			return result;
 		}
 
-		public readonly Field Normalize()
+		public readonly FieldElement Normalize()
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
 
@@ -978,7 +1005,7 @@ namespace NBitcoin.Secp256k1
 			n5 = t5; n6 = t6; n7 = t7; n8 = t8; n9 = t9;
 			magnitude = 1;
 			normalized = true;
-			var result = new Field(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			result.VERIFY();
 			return result;
 		}
@@ -1057,9 +1084,9 @@ namespace NBitcoin.Secp256k1
 				throw new InvalidOperationException("VERIFY_CHECK failed (bug in C# secp256k1)");
 		}
 
-		public readonly bool Equals(Field b)
+		public readonly bool Equals(FieldElement b)
 		{
-			ref readonly Field a = ref this;
+			ref readonly FieldElement a = ref this;
 			var na = a.Negate(1);
 			na += b;
 			return na.NormalizesToZero();
@@ -1095,26 +1122,30 @@ namespace NBitcoin.Secp256k1
 			return ((z0 == 0 ? 1 : 0) | (z1 == 0x3FFFFFFU ? 1 : 0)) != 0;
 		}
 
-		public static bool operator ==(in Field a, in Field b)
+		public static bool operator ==(in FieldElement a, in FieldElement b)
 		{
 			return a.Equals(b);
 		}
-		public static bool operator !=(in Field a, in Field b)
+		public static bool operator !=(in FieldElement a, in FieldElement b)
 		{
 			return !a.Equals(b);
 		}
-		public static Field operator *(in Field a, in Field b)
+		public static FieldElement operator *(in FieldElement a, in FieldElement b)
 		{
 			return a.Multiply(b);
 		}
-		public static Field operator +(in Field a, in Field b)
+		public static FieldElement operator *(in FieldElement a, in uint b)
+		{
+			return a.Multiply(b);
+		}
+		public static FieldElement operator +(in FieldElement a, in FieldElement b)
 		{
 			return a.Add(b);
 		}
 
 		public readonly override bool Equals(object obj)
 		{
-			if (obj is Field other)
+			if (obj is FieldElement other)
 			{
 				return this.Equals(other);
 			}

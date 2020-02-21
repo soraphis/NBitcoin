@@ -20,7 +20,7 @@ namespace NBitcoin.Tests
 		[Trait("UnitTest", "UnitTest")]
 		public void run_field_inv()
 		{
-			Field x, xi, xii;
+			FieldElement x, xi, xii;
 			int i;
 			for (i = 0; i < 10 * count; i++)
 			{
@@ -33,16 +33,35 @@ namespace NBitcoin.Tests
 			}
 		}
 
-		private void check_fe_inverse(Field a, Field b)
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_sqr()
 		{
-			Field one = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
-			Field x = a * b;
+			FieldElement x, s;
+			{
+				int i;
+				x = new FieldElement(1U);
+				x = x.Negate(1);
+
+				for (i = 1; i <= 512; ++i)
+				{
+					x = x * 2;
+					x = x.Normalize();
+					s = x.Sqr();
+				}
+			}
+		}
+
+		private void check_fe_inverse(FieldElement a, FieldElement b)
+		{
+			FieldElement one = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+			FieldElement x = a * b;
 			Assert.Equal(x, one);
 		}
 
-		private Field SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
+		private FieldElement SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
 		{
-			return new Field((d0) & 0x3FFFFFFU,
+			return new FieldElement((d0) & 0x3FFFFFFU,
 	(((uint)d0) >> 26) | (((uint)(d1) & 0xFFFFFU) << 6),
 	(((uint)d1) >> 20) | (((uint)(d2) & 0x3FFFU) << 12),
 	(((uint)d2) >> 14) | (((uint)(d3) & 0xFFU) << 18),
@@ -54,9 +73,9 @@ namespace NBitcoin.Tests
 	(((uint)d7) >> 10), 1, true);
 		}
 
-		private Field random_fe_non_zero()
+		private FieldElement random_fe_non_zero()
 		{
-			Field nz = default;
+			FieldElement nz = default;
 			int tries = 10;
 			while (--tries >= 0)
 			{
@@ -947,14 +966,14 @@ namespace NBitcoin.Tests
 			return ret;
 		}
 
-		Field random_field_element_test()
+		FieldElement random_field_element_test()
 		{
-			Field field;
+			FieldElement field;
 			Span<byte> output = stackalloc byte[32];
 			do
 			{
 				RandomUtils.GetBytes(output);
-				if (Field.TryCreate(output, out field))
+				if (FieldElement.TryCreate(output, out field))
 				{
 					break;
 				}
@@ -962,14 +981,14 @@ namespace NBitcoin.Tests
 			return field;
 		}
 
-		private Field random_fe()
+		private FieldElement random_fe()
 		{
-			Field field;
+			FieldElement field;
 			Span<byte> output = stackalloc byte[32];
 			do
 			{
 				secp256k1_rand256(output);
-				if (Field.TryCreate(output, out field))
+				if (FieldElement.TryCreate(output, out field))
 				{
 					return field;
 				}
