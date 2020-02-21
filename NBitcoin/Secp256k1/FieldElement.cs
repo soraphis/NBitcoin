@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace NBitcoin.Secp256k1
@@ -62,6 +63,7 @@ namespace NBitcoin.Secp256k1
 			VERIFY();
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly bool Sqrt(out FieldElement result)
 		{
 			ref readonly FieldElement a = ref this;
@@ -189,7 +191,7 @@ namespace NBitcoin.Secp256k1
 			n7 = a.n8 >> 16 | a.n9 << 10;
 			return new FieldElementStorage(n0, n1, n2, n3, n4, n5, n6, n7);
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Inverse()
 		{
 			FieldElement x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1;
@@ -294,6 +296,7 @@ namespace NBitcoin.Secp256k1
 			return a * t1;
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Sqr()
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, _, _) = Zero;
@@ -309,6 +312,7 @@ namespace NBitcoin.Secp256k1
 			return r;
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private readonly void secp256k1_fe_sqr_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9)
 		{
 			ulong c, d;
@@ -588,7 +592,7 @@ namespace NBitcoin.Secp256k1
 		{
 			VERIFY_CHECK(((x) >> (n)) == 0);
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Multiply(in FieldElement b)
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, _, _) = Zero;
@@ -605,6 +609,7 @@ namespace NBitcoin.Secp256k1
 			r.VERIFY();
 			return r;
 		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Multiply(uint a)
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
@@ -624,6 +629,7 @@ namespace NBitcoin.Secp256k1
 			r.VERIFY();
 			return r;
 		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Add(in FieldElement a)
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
@@ -645,6 +651,7 @@ namespace NBitcoin.Secp256k1
 			return r;
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private readonly void secp256k1_fe_mul_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9, in FieldElement b)
 		{
 			ref readonly FieldElement a = ref this;
@@ -1050,7 +1057,7 @@ namespace NBitcoin.Secp256k1
 
 		public readonly bool IsZero
 		{
-			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+			[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 			get
 			{
 				VERIFY_CHECK(normalized);
@@ -1059,6 +1066,7 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Negate(int m)
 		{
 			ref readonly FieldElement a = ref this;
@@ -1082,6 +1090,7 @@ namespace NBitcoin.Secp256k1
 			return result;
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement NormalizeWeak()
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
@@ -1173,7 +1182,7 @@ namespace NBitcoin.Secp256k1
 			return result;
 		}
 
-		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Normalize()
 		{
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
@@ -1305,6 +1314,7 @@ namespace NBitcoin.Secp256k1
 				throw new InvalidOperationException("VERIFY_CHECK failed (bug in C# secp256k1)");
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly bool Equals(FieldElement b)
 		{
 			ref readonly FieldElement a = ref this;
@@ -1320,6 +1330,7 @@ namespace NBitcoin.Secp256k1
 			return na.NormalizesToZero();
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly bool NormalizesToZero()
 		{
 			uint t0 = n0, t1 = n1, t2 = n2, t3 = n3, t4 = n4,
@@ -1369,6 +1380,26 @@ namespace NBitcoin.Secp256k1
 		public static FieldElement operator +(in FieldElement a, in FieldElement b)
 		{
 			return a.Add(b);
+		}
+
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public readonly override int GetHashCode()
+		{
+			unchecked
+			{
+				int hash = 17;
+				hash = hash * 23 + n0.GetHashCode();
+				hash = hash * 23 + n1.GetHashCode();
+				hash = hash * 23 + n2.GetHashCode();
+				hash = hash * 23 + n3.GetHashCode();
+				hash = hash * 23 + n4.GetHashCode();
+				hash = hash * 23 + n5.GetHashCode();
+				hash = hash * 23 + n6.GetHashCode();
+				hash = hash * 23 + n7.GetHashCode();
+				hash = hash * 23 + n8.GetHashCode();
+				hash = hash * 23 + n9.GetHashCode();
+				return hash;
+			}
 		}
 
 		public readonly override bool Equals(object obj)

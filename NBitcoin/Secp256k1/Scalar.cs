@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace NBitcoin.Secp256k1
@@ -7,6 +8,7 @@ namespace NBitcoin.Secp256k1
 	readonly struct Scalar : IEquatable<Scalar>
 	{
 		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		static void muladd(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
 		{
 			uint tl, th;
@@ -23,6 +25,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		static void muladd_fast(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
 		{
 			uint tl, th;
@@ -36,7 +39,7 @@ namespace NBitcoin.Secp256k1
 			c1 += th;                 /* never overflows by contract (verified in the next line) */
 			VERIFY_CHECK(c1 >= th);
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		static void muladd2(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
 		{
 			uint tl, th, th2, tl2;
@@ -60,6 +63,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		static void sumadd(ref uint c0, ref uint c1, ref uint c2, uint a)
 		{
 			uint over;
@@ -70,6 +74,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		static void sumadd_fast(ref uint c0, ref uint c1, ref uint c2, uint a)
 		{
 			c0 += (a);                 /* overflow is handled on the next line */
@@ -77,11 +82,12 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK((c1 != 0) | (c0 >= (a)));
 			VERIFY_CHECK(c2 == 0);
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly Scalar Add(in Scalar b)
 		{
 			return Add(b, out _);
 		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly Scalar Add(in Scalar b, out int overflow)
 		{
 			uint d0;
@@ -114,8 +120,8 @@ namespace NBitcoin.Secp256k1
 			Reduce(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, overflow);
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
-
 		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		static void extract(ref uint c0, ref uint c1, ref uint c2, out uint n)
 		{
 			(n) = c0;
@@ -124,6 +130,7 @@ namespace NBitcoin.Secp256k1
 			c2 = 0;
 		}
 		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		static void extract_fast(ref uint c0, ref uint c1, ref uint c2, out uint n)
 		{
 			(n) = c0;
@@ -188,7 +195,7 @@ namespace NBitcoin.Secp256k1
 			overflow = CheckOverflow();
 			Reduce(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, overflow);
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		internal readonly Scalar CAddBit(uint bit, int flag)
 		{
 			uint d0, d1, d2, d3, d4, d5, d6, d7;
@@ -217,6 +224,7 @@ namespace NBitcoin.Secp256k1
 			return r;
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private static int Reduce(ref uint d0, ref uint d1, ref uint d2, ref uint d3, ref uint d4, ref uint d5, ref uint d6, ref uint d7, int overflow)
 		{
 			ulong t;
@@ -239,6 +247,7 @@ namespace NBitcoin.Secp256k1
 			d7 = (uint)t;
 			return overflow;
 		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private static void reduce_512(ref uint d0, ref uint d1, ref uint d2, ref uint d3, ref uint d4, ref uint d5, ref uint d6, ref uint d7, Span<uint> l)
 		{
 			ulong c;
@@ -381,7 +390,7 @@ namespace NBitcoin.Secp256k1
 			/* Final reduction of r. */
 			Reduce(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, (int)c + new Scalar(d0, d1, d2, d3, d4, d5, d6, d7).CheckOverflow());
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private static void mul_512(Span<uint> l, in Scalar a, in Scalar b)
 		{
 			/* 96 bit accumulator. */
@@ -470,7 +479,7 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(c1 == 0);
 			l[15] = c0;
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		internal static void sqr_512(Span<uint> l, in Scalar a)
 		{
 			/* 96 bit accumulator. */
@@ -545,6 +554,7 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		internal readonly int CheckOverflow()
 		{
 			int yes = 0;
@@ -576,6 +586,7 @@ namespace NBitcoin.Secp256k1
 			bin[28] = (byte)(d0 >> 24); bin[29] = (byte)(d0 >> 16); bin[30] = (byte)(d0 >> 8); bin[31] = (byte)d0;
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		internal readonly uint GetBits(int offset, int count)
 		{
 			if (offset < 0)
@@ -585,7 +596,7 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK((offset + count - 1) >> 5 == offset >> 5);
 			return (uint)((At(offset >> 5) >> (offset & 0x1F)) & ((1 << count) - 1));
 		}
-		internal readonly uint GetBitsVar(int offset, int count)
+		internal readonly uint GetBitsVariable(int offset, int count)
 		{
 			if (offset < 0)
 				throw new ArgumentOutOfRangeException(nameof(offset), "Offset should be more than 0");
@@ -654,7 +665,7 @@ namespace NBitcoin.Secp256k1
 
 		public readonly bool IsZero
 		{
-			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+			[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 			get
 			{
 				return (d0 | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
@@ -662,13 +673,13 @@ namespace NBitcoin.Secp256k1
 		}
 		public readonly bool IsOne
 		{
-			[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+			[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 			get
 			{
 				return ((d0 ^ 1) | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
 			}
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly Scalar Sqr()
 		{
 			var (d0, d1, d2, d3, d4, d5, d6, d7) = this;
@@ -677,6 +688,7 @@ namespace NBitcoin.Secp256k1
 			reduce_512(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, l);
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly Scalar Inverse()
 		{
 			ref readonly Scalar x = ref this;

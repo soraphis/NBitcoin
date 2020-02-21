@@ -1,13 +1,21 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using Xunit;
 using NBitcoin.Secp256k1;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using Xunit.Abstractions;
 
 namespace NBitcoin.Tests
 {
 	public class Secp256k1Tests
 	{
+		public Secp256k1Tests(ITestOutputHelper output)
+		{
+			this.output = output;
+		}
 		Scalar One = new Scalar(1, 0, 0, 0, 0, 0, 0, 0);
 		Scalar Two = new Scalar(2, 0, 0, 0, 0, 0, 0, 0);
 		Scalar Three = new Scalar(3, 0, 0, 0, 0, 0, 0, 0);
@@ -49,6 +57,35 @@ namespace NBitcoin.Tests
 					x = x.Normalize();
 					s = x.Sqr();
 				}
+			}
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void EnsureNoOptimization()
+		{
+			HashSet<string> whitelist = new HashSet<string>();
+			whitelist.Add("get_Zero");
+			whitelist.Add("ToStorage");
+			whitelist.Add("TryCreate");
+			whitelist.Add("Deconstruct");
+			whitelist.Add("MemberwiseClone");
+			whitelist.Add("Finalize");
+			whitelist.Add("At");
+			foreach (var method in typeof(Scalar).Assembly.GetTypes()
+				.Where(t => t.Namespace?.StartsWith(typeof(Scalar).Namespace) is true)
+				.SelectMany(m => m.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)))
+			{
+				if (whitelist.Contains(method.Name))
+					continue;
+				if (method.Name.EndsWith("Variable") ||
+					method.Name.StartsWith("op_") ||
+					method.Name.StartsWith("VERIFY"))
+					continue;
+				var optimized = method.MethodImplementationFlags.HasFlag(MethodImplAttributes.NoOptimization);
+				var methodName = $"{method.DeclaringType.Name}.{method.Name}";
+				output.WriteLine(methodName + " " + optimized);
+				Assert.True(optimized, $"Type {method.DeclaringType.Name}.{method.Name} does not have NoOptimization set");
 			}
 		}
 
@@ -883,7 +920,7 @@ namespace NBitcoin.Tests
 					{
 						now = 256 - i;
 					}
-					Scalar t = new Scalar(s.GetBitsVar(256 - now - i, now));
+					Scalar t = new Scalar(s.GetBitsVariable(256 - now - i, now));
 					for (j = 0; j < now; j++)
 					{
 						n = n + n;
@@ -1021,6 +1058,8 @@ namespace NBitcoin.Tests
 		static int[] addbits = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 2, 1, 0 };
 		static int secp256k1_test_rng_integer_bits_left = 0;
 		static ulong secp256k1_test_rng_integer;
+		private readonly ITestOutputHelper output;
+
 		static uint secp256k1_rand_int(uint range)
 		{
 			/* We want a uniform integer between 0 and range-1, inclusive.
