@@ -8,8 +8,8 @@ namespace NBitcoin.Secp256k1
 	public readonly struct FieldElement : IEquatable<FieldElement>
 	{
 		readonly uint n0, n1, n2, n3, n4, n5, n6, n7, n8, n9;
-		readonly int magnitude;
-		readonly bool normalized;
+		internal readonly int magnitude;
+		internal readonly bool normalized;
 
 		static readonly FieldElement _Zero = new FieldElement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		public static ref readonly FieldElement Zero => ref _Zero;
@@ -191,6 +191,58 @@ namespace NBitcoin.Secp256k1
 			n7 = a.n8 >> 16 | a.n9 << 10;
 			return new FieldElementStorage(n0, n1, n2, n3, n4, n5, n6, n7);
 		}
+
+		public readonly int CompareToVariable(in FieldElement b)
+		{
+			ref readonly FieldElement a = ref this;
+			int i;
+			VERIFY_CHECK(a.normalized);
+			VERIFY_CHECK(b.normalized);
+			a.VERIFY();
+			b.VERIFY();
+			for (i = 9; i >= 0; i--)
+			{
+				if (a.At(i) > b.At(i))
+				{
+					return 1;
+				}
+				if (a.At(i) < b.At(i))
+				{
+					return -1;
+				}
+			}
+			return 0;
+		}
+
+		internal uint At(int index)
+		{
+			switch (index)
+			{
+				case 0:
+					return n0;
+				case 1:
+					return n1;
+				case 2:
+					return n2;
+				case 3:
+					return n3;
+				case 4:
+					return n4;
+				case 5:
+					return n5;
+				case 6:
+					return n6;
+				case 7:
+					return n7;
+				case 8:
+					return n8;
+				case 9:
+					return n9;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(index), "index should 0-7 inclusive");
+			}
+		}
+
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Inverse()
 		{
@@ -1007,6 +1059,31 @@ namespace NBitcoin.Secp256k1
 			normalized = true;
 			field = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			return true;
+		}
+
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public FieldElement CMov(FieldElement a, int flag)
+		{
+			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
+			uint mask0, mask1;
+			mask0 = (uint)flag + ~((uint)0);
+			mask1 = ~mask0;
+			n0 = (n0 & mask0) | (a.n0 & mask1);
+			n1 = (n1 & mask0) | (a.n1 & mask1);
+			n2 = (n2 & mask0) | (a.n2 & mask1);
+			n3 = (n3 & mask0) | (a.n3 & mask1);
+			n4 = (n4 & mask0) | (a.n4 & mask1);
+			n5 = (n5 & mask0) | (a.n5 & mask1);
+			n6 = (n6 & mask0) | (a.n6 & mask1);
+			n7 = (n7 & mask0) | (a.n7 & mask1);
+			n8 = (n8 & mask0) | (a.n8 & mask1);
+			n9 = (n9 & mask0) | (a.n9 & mask1);
+			if (a.magnitude > magnitude)
+			{
+				magnitude = a.magnitude;
+			}
+			normalized &= a.normalized;
+			return new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 		}
 
 		public FieldElement(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9, int magnitude, bool normalized)

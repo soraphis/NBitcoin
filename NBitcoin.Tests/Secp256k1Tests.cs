@@ -180,6 +180,93 @@ namespace NBitcoin.Tests
 			}
 		}
 
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_field_misc()
+		{
+			FieldElement x;
+			FieldElement y;
+			FieldElement z;
+			FieldElement q;
+			FieldElement fe5 = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 5);
+			int i, j;
+			for (i = 0; i < 5 * count; i++)
+			{
+				FieldElementStorage xs, ys, zs;
+				x = random_fe();
+				y = random_fe_non_zero();
+				/* Test the fe equality and comparison operations. */
+				Assert.True(x.CompareToVariable(x) == 0);
+				Assert.True(x.EqualsVariable(x));
+				z = x;
+				z += y;
+				/* Test fe conditional move; z is not normalized here. */
+				q = x;
+				x = x.CMov(z, 0);
+				Assert.True(!x.normalized && x.magnitude == z.magnitude);
+				x = x.CMov(x, 1);
+				Assert.True(fe_memcmp(x, z) != 0);
+				Assert.True(fe_memcmp(x, q) == 0);
+				q = q.CMov(z, 1);
+				Assert.True(!q.normalized && q.magnitude == z.magnitude);
+				Assert.True(fe_memcmp(q, z) == 0);
+				x = x.NormalizeVariable();
+				z = z.NormalizeVariable();
+				Assert.False(x.EqualsVariable(y));
+				q = q.NormalizeVariable();
+				q = q.CMov(z, (i & 1));
+				Assert.True(q.normalized && q.magnitude == 1);
+				for (j = 0; j < 6; j++)
+				{
+					z = z.Negate(j + 1);
+					q = q.NormalizeVariable();
+					q = q.CMov(z, (j & 1));
+					Assert.True(!q.normalized && q.magnitude == (j + 2));
+				}
+				z = z.NormalizeVariable();
+				/* Test storage conversion and conditional moves. */
+				xs = x.ToStorage();
+				ys = y.ToStorage();
+				zs = z.ToStorage();
+				zs = zs.CMov(xs, 0);
+				zs = zs.CMov(zs, 1);
+				Assert.NotEqual(xs, zs);
+				ys = ys.CMov(xs, 1);
+				Assert.Equal(xs, ys);
+				x = xs.ToFieldElement();
+				y = ys.ToFieldElement();
+				z = zs.ToFieldElement();
+				/* Test that mul_int, mul, and add agree. */
+				y += x;
+				y += x;
+				z = x;
+				z *= 3;
+				check_fe_equal(y, z);
+				y += x;
+				z += x;
+				check_fe_equal(z, y);
+				z = x;
+				z *= 5;
+				q = x * fe5;
+				check_fe_equal(z, q);
+				x = x.Negate(1);
+				z += x;
+				q += x;
+				check_fe_equal(y, z);
+				check_fe_equal(q, y);
+			}
+		}
+
+		private int fe_memcmp(FieldElement a, FieldElement b)
+		{
+			for (int i = 0; i < 9; i++)
+			{
+				if (a.At(i) != b.At(i))
+					return 1;
+			}
+			return 0;
+		}
+
 		private FieldElement random_fe_non_square()
 		{
 			var ns = random_fe_non_zero();
