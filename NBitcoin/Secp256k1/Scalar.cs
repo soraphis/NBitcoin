@@ -9,7 +9,7 @@ namespace NBitcoin.Secp256k1
 	readonly struct Scalar : IEquatable<Scalar>
 	{
 		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 		static void muladd(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
 		{
 			uint tl, th;
@@ -26,7 +26,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 		static void muladd_fast(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
 		{
 			uint tl, th;
@@ -40,7 +40,7 @@ namespace NBitcoin.Secp256k1
 			c1 += th;                 /* never overflows by contract (verified in the next line) */
 			VERIFY_CHECK(c1 >= th);
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 		static void muladd2(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
 		{
 			uint tl, th, th2, tl2;
@@ -64,7 +64,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 		static void sumadd(ref uint c0, ref uint c1, ref uint c2, uint a)
 		{
 			uint over;
@@ -75,7 +75,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
 		static void sumadd_fast(ref uint c0, ref uint c1, ref uint c2, uint a)
 		{
 			c0 += (a);                 /* overflow is handled on the next line */
