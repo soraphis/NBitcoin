@@ -1265,6 +1265,14 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+		public readonly bool IsQuadVariable
+		{
+			get
+			{
+				return this.Sqrt(out _);
+			}
+		}
+
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Negate(int m)
 		{

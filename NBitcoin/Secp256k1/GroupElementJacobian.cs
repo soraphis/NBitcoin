@@ -21,6 +21,21 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+		public readonly bool HasQuadYVariable
+		{
+			get
+			{
+				if (infinity)
+				{
+					return false;
+				}
+				/* We rely on the fact that the Jacobi symbol of 1 / a->z^3 is the same as
+				 * that of a->z. Thus a->y / a->z^3 is a quadratic residue iff a->y * a->z
+				   is */
+				return (y * z).IsQuadVariable;
+			}
+		}
+
 		public GroupElementJacobian(in FieldElement x, in FieldElement y, in FieldElement z, bool infinity)
 		{
 			this.x = x;
@@ -112,6 +127,11 @@ namespace NBitcoin.Secp256k1
 			FieldElement rx = a.x * zi2;
 			FieldElement ry = a.y * zi3;
 			return new GroupElement(rx, ry, a.infinity);
+		}
+
+		public readonly GroupElementJacobian Negate()
+		{
+			return new GroupElementJacobian(x, y.NormalizeWeak().Negate(1), z, infinity);
 		}
 
 		public readonly GroupElementJacobian AddVariable(in GroupElementJacobian b, out FieldElement rzr)

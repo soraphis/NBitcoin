@@ -43,6 +43,83 @@ namespace NBitcoin.Tests
 
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
+		public void run_group_decompress()
+		{
+			int i;
+			for (i = 0; i < count * 4; i++)
+			{
+				FieldElement fe = random_field_element_test();
+				test_group_decompress(fe);
+			}
+		}
+
+		private void test_group_decompress(FieldElement x)
+		{
+			/* The input itself, normalized. */
+			FieldElement fex = x;
+			FieldElement fez;
+			/* Results of set_xquad_var, set_xo_var(..., 0), set_xo_var(..., 1). */
+			GroupElement ge_quad, ge_even, ge_odd;
+			GroupElementJacobian gej_quad;
+			/* Return values of the above calls. */
+			bool res_quad, res_even, res_odd;
+
+			fex = fex.NormalizeVariable();
+
+			res_quad = GroupElement.TryCreateXQuad(fex, out ge_quad);
+			res_even = GroupElement.TryCreateXOVariable(fex, false, out ge_even);
+			res_odd = GroupElement.TryCreateXOVariable(fex, true, out ge_odd);
+
+			Assert.True(res_quad == res_even);
+			Assert.True(res_quad == res_odd);
+
+			if (res_quad)
+			{
+				ge_quad = new GroupElement(ge_quad.x.NormalizeVariable(), ge_quad.y.NormalizeVariable(), ge_quad.infinity);
+				ge_odd = new GroupElement(ge_odd.x.NormalizeVariable(), ge_odd.y.NormalizeVariable(), ge_odd.infinity);
+				ge_even = new GroupElement(ge_even.x.NormalizeVariable(), ge_even.y.NormalizeVariable(), ge_even.infinity);
+
+				/* No infinity allowed. */
+				Assert.True(!ge_quad.infinity);
+				Assert.True(!ge_even.infinity);
+				Assert.True(!ge_odd.infinity);
+
+				/* Check that the x coordinates check out. */
+				Assert.True(ge_quad.x.EqualsVariable(x));
+				Assert.True(ge_even.x.EqualsVariable(x));
+				Assert.True(ge_odd.x.EqualsVariable(x));
+
+				/* Check that the Y coordinate result in ge_quad is a square. */
+				Assert.True(ge_quad.y.IsQuadVariable);
+
+				/* Check odd/even Y in ge_odd, ge_even. */
+				Assert.True(ge_odd.y.IsOdd);
+				Assert.True(!ge_even.y.IsOdd);
+
+				/* Check secp256k1_gej_has_quad_y_var. */
+				gej_quad = ge_quad.ToGroupElementJacobian();
+				Assert.True(gej_quad.HasQuadYVariable);
+				do
+				{
+					fez = random_field_element_test();
+				} while (fez.IsZero);
+				gej_quad = gej_quad.Rescale(fez);
+				Assert.True(gej_quad.HasQuadYVariable);
+				gej_quad = gej_quad.Negate();
+				Assert.True(!gej_quad.HasQuadYVariable);
+				do
+				{
+					fez = random_field_element_test();
+				} while (fez.IsZero);
+				gej_quad = gej_quad.Rescale(fez);
+				Assert.True(!gej_quad.HasQuadYVariable);
+				gej_quad = gej_quad.Negate();
+				Assert.True(gej_quad.HasQuadYVariable);
+			}
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
 		public void run_sqr()
 		{
 			FieldElement x, s;
