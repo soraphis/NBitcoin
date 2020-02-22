@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -540,6 +541,8 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(c1 == 0);
 			l[15] = c0;
 		}
+
+		[Conditional("SECP256K1_VERIFY")]
 		private static void VERIFY_CHECK(bool value)
 		{
 			if (!value)

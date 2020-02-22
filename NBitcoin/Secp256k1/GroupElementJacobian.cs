@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace NBitcoin.Secp256k1
@@ -282,6 +283,7 @@ namespace NBitcoin.Secp256k1
 
 			return a.DoubleNonZero();
 		}
+		[Conditional("SECP256K1_VERIFY")]
 		private static void VERIFY_CHECK(bool value)
 		{
 			if (!value)

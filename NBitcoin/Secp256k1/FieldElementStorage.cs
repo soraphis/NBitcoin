@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace NBitcoin.Secp256k1
@@ -61,6 +62,7 @@ namespace NBitcoin.Secp256k1
 			normalized = true;
 			return new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 		}
+		[Conditional("SECP256K1_VERIFY")]
 		private static void VERIFY_CHECK(bool value)
 		{
 			if (!value)

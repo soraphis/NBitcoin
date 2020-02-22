@@ -22,7 +22,7 @@ namespace NBitcoin.Tests
 		Scalar Six = new Scalar(6, 0, 0, 0, 0, 0, 0, 0);
 		Scalar Nine = new Scalar(9, 0, 0, 0, 0, 0, 0, 0);
 		Scalar OneToEight = new Scalar(1, 2, 3, 4, 5, 6, 7, 8);
-		static int count = 32;
+		static int count = 10;
 
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
@@ -409,7 +409,6 @@ namespace NBitcoin.Tests
 				ge[3 + 4 * i] = g.Negate();
 				ge[4 + 4 * i] = g.Negate();
 				gej[1 + 4 * i] = ge[1 + 4 * i].ToGroupElementJacobian();
-
 
 				random_group_element_jacobian_test(ref gej[2 + 4 * i], ref ge[2 + 4 * i]);
 				gej[3 + 4 * i] = ge[3 + 4 * i].ToGroupElementJacobian();

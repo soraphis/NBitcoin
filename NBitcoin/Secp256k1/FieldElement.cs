@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -748,6 +749,7 @@ namespace NBitcoin.Secp256k1
 			/* [r9 r8 r7 r6 r5 r4 r3 r2 r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 		}
 
+		[Conditional("SECP256K1_VERIFY")]
 		static void VERIFY_BITS(ulong x, int n)
 		{
 			VERIFY_CHECK(((x) >> (n)) == 0);
@@ -1475,6 +1477,7 @@ namespace NBitcoin.Secp256k1
 			r[31] = (byte)(n0 & 0xff);
 		}
 
+		[Conditional("SECP256K1_VERIFY")]
 		private readonly void VERIFY()
 		{
 			int m = normalized ? 1 : 2 * magnitude, r = 1;
@@ -1504,7 +1507,7 @@ namespace NBitcoin.Secp256k1
 			}
 			VERIFY_CHECK(r == 1);
 		}
-
+		[Conditional("SECP256K1_VERIFY")]
 		private static void VERIFY_CHECK(bool value)
 		{
 			if (!value)
