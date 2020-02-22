@@ -12,7 +12,24 @@ namespace NBitcoin.Secp256k1
 		internal readonly bool normalized;
 
 		static readonly FieldElement _Zero = new FieldElement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		internal static readonly uint CURVE_B = 4;
+
 		public static ref readonly FieldElement Zero => ref _Zero;
+
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public static FieldElement SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
+		{
+			return new FieldElement((d0) & 0x3FFFFFFU,
+	(((uint)d0) >> 26) | (((uint)(d1) & 0xFFFFFU) << 6),
+	(((uint)d1) >> 20) | (((uint)(d2) & 0x3FFFU) << 12),
+	(((uint)d2) >> 14) | (((uint)(d3) & 0xFFU) << 18),
+	(((uint)d3) >> 8) | (((uint)(d4) & 0x3U) << 24),
+	(((uint)d4) >> 2) & 0x3FFFFFFU,
+	(((uint)d4) >> 28) | (((uint)(d5) & 0x3FFFFFU) << 4),
+	(((uint)d5) >> 22) | (((uint)(d6) & 0xFFFFU) << 10),
+	(((uint)d6) >> 16) | (((uint)(d7) & 0x3FFU) << 16),
+	(((uint)d7) >> 10), 1, true);
+		}
 
 		public FieldElement(uint a)
 		{
@@ -42,6 +59,66 @@ namespace NBitcoin.Secp256k1
 			normalized = true;
 			VERIFY();
 		}
+
+		public readonly bool NormalizesToZeroVariable()
+		{
+			uint t0, t1, t2, t3, t4, t5, t6, t7, t8, t9;
+			uint z0, z1;
+			uint x;
+
+			t0 = n0;
+			t9 = n9;
+
+			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
+			x = t9 >> 22;
+
+			/* The first pass ensures the magnitude is 1, ... */
+			t0 += x * 0x3D1U;
+
+			/* z0 tracks a possible raw value of 0, z1 tracks a possible raw value of P */
+			z0 = t0 & 0x3FFFFFFU;
+			z1 = z0 ^ 0x3D0U;
+
+			/* Fast return path should catch the majority of cases */
+			if ((z0 != 0UL) & (z1 != 0x3FFFFFFUL))
+			{
+				return false;
+			}
+
+			t1 = n1;
+			t2 = n2;
+			t3 = n3;
+			t4 = n4;
+			t5 = n5;
+			t6 = n6;
+			t7 = n7;
+			t8 = n8;
+
+			t9 &= 0x03FFFFFU;
+			t1 += (x << 6);
+
+			t1 += (t0 >> 26);
+			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU; z0 |= t1; z1 &= t1 ^ 0x40U;
+			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU; z0 |= t2; z1 &= t2;
+			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU; z0 |= t3; z1 &= t3;
+			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU; z0 |= t4; z1 &= t4;
+			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU; z0 |= t5; z1 &= t5;
+			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU; z0 |= t6; z1 &= t6;
+			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU; z0 |= t7; z1 &= t7;
+			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU; z0 |= t8; z1 &= t8;
+			z0 |= t9; z1 &= t9 ^ 0x3C00000U;
+
+			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
+			VERIFY_CHECK(t9 >> 23 == 0);
+
+			return (z0 == 0) | (z1 == 0x3FFFFFFUL);
+		}
+
+		public readonly FieldElement InverseVariable()
+		{
+			return this.Inverse();
+		}
+
 		public FieldElement(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9)
 		{
 			this.n0 = n0;
@@ -364,6 +441,37 @@ namespace NBitcoin.Secp256k1
 			return r;
 		}
 
+		public static void InverseAllVariable(FieldElement[] r, FieldElement[] a, int len)
+		{
+			FieldElement u;
+			int i;
+			if (len < 1)
+			{
+				return;
+			}
+
+			VERIFY_CHECK(r != a);
+
+			r[0] = a[0];
+
+			i = 0;
+			while (++i < len)
+			{
+				r[i] = r[i - 1] * a[i];
+			}
+
+			u = r[--i].InverseVariable();
+
+			while (i > 0)
+			{
+				int j = i--;
+				r[j] = r[i] * u;
+				u = u * a[j];
+			}
+
+			r[0] = u;
+		}
+
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private readonly void secp256k1_fe_sqr_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9)
 		{
@@ -640,7 +748,7 @@ namespace NBitcoin.Secp256k1
 			/* [r9 r8 r7 r6 r5 r4 r3 r2 r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 		}
 
-		private void VERIFY_BITS(ulong x, int n)
+		static void VERIFY_BITS(ulong x, int n)
 		{
 			VERIFY_CHECK(((x) >> (n)) == 0);
 		}
@@ -661,6 +769,7 @@ namespace NBitcoin.Secp256k1
 			r.VERIFY();
 			return r;
 		}
+
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Multiply(uint a)
 		{
@@ -1143,6 +1252,17 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+		public readonly bool IsOdd
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get
+			{
+				VERIFY_CHECK(normalized);
+				VERIFY();
+				return (n0 & 1) != 0;
+			}
+		}
+
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Negate(int m)
 		{
@@ -1486,6 +1606,12 @@ namespace NBitcoin.Secp256k1
 				return this.Equals(other);
 			}
 			return false;
+		}
+
+		public readonly string ToC(string varName)
+		{
+			var normalizedStr = normalized ? "1" : "0";
+			return $"secp256k1_fe {varName} = {{ 0x{n0.ToString("X8")}UL, 0x{n1.ToString("X8")}UL, 0x{n2.ToString("X8")}UL, 0x{n3.ToString("X8")}UL, 0x{n4.ToString("X8")}UL, 0x{n5.ToString("X8")}UL, 0x{n6.ToString("X8")}UL, 0x{n7.ToString("X8")}UL, 0x{n8.ToString("X8")}UL, 0x{n9.ToString("X8")}UL, {magnitude}, {normalizedStr} }};";
 		}
 	}
 }

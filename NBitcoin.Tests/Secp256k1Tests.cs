@@ -257,6 +257,492 @@ namespace NBitcoin.Tests
 			}
 		}
 
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_ge()
+		{
+			int i;
+			for (i = 0; i < count * 32; i++)
+			{
+				test_ge();
+			}
+			test_add_neg_y_diff_x();
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void test_normalizes_to_zero()
+		{
+			FieldElement fe = new FieldElement(0x1298baf3, 0x138381c5, 0x13162263, 0x0d1b8377, 0x109bb537, 0x0e33045f, 0x0e808c49, 0x0c8d29c5, 0x1291a325, 0x0116a7eb, 3, false);
+			Assert.False(fe.NormalizesToZeroVariable());
+			Assert.False(fe.NormalizesToZero());
+		}
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void test_ge_neg()
+		{
+			GroupElement ge = new GroupElement(
+				new FieldElement(0x03ff0100, 0x00003c3f, 0x00000000, 0x00000000, 0x02c0ff01, 0x03ffc1ff, 0x000fefff, 0x00000001, 0x03ff0300, 0x003fffff, 1, true),
+				new FieldElement(0x03fba4e9, 0x0239dfde, 0x03918486, 0x02c5c78a, 0x0260ac5c, 0x02ff047d, 0x01105975, 0x020e698e, 0x02a3e2e6, 0x0003e8e8, 1, true),
+				false
+				);
+
+			GroupElement expectedNeg = new GroupElement(
+				new FieldElement(0x03ff0100, 0x00003c3f, 0x00000000, 0x00000000, 0x02c0ff01, 0x03ffc1ff, 0x000fefff, 0x00000001, 0x03ff0300, 0x003fffff, 1, true),
+				new FieldElement(0x0c044bd3, 0x0dc61f1e, 0x0c6e7b76, 0x0d3a3872, 0x0d9f53a0, 0x0d00fb7f, 0x0eefa687, 0x0df1966e, 0x0d5c1d16, 0x00fc1714, 2, false),
+				false
+				);
+
+			var actualNeg = ge.Negate();
+			Assert.Equal(expectedNeg.x.GetHashCode(), actualNeg.x.GetHashCode());
+			Assert.Equal(expectedNeg.y.GetHashCode(), actualNeg.y.GetHashCode());
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void test_add_neg_y_diff_x()
+		{
+			/* The point of this test is to check that we can add two points
+	* whose y-coordinates are negatives of each other but whose x
+	* coordinates differ. If the x-coordinates were the same, these
+	* points would be negatives of each other and their sum is
+	* infinity. This is cool because it "covers up" any degeneracy
+	* in the addition algorithm that would cause the xy coordinates
+	* of the sum to be wrong (since infinity has no xy coordinates).
+	* HOWEVER, if the x-coordinates are different, infinity is the
+	* wrong answer, and such degeneracies are exposed. This is the
+	* root of https://github.com/bitcoin-core/secp256k1/issues/257
+	* which this test is a regression test for.
+	*
+	* These points were generated in sage as
+	* # secp256k1 params
+	* F = FiniteField (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F)
+	* C = EllipticCurve ([F (0), F (7)])
+	* G = C.lift_x(0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798)
+	* N = FiniteField(G.order())
+	*
+	* # endomorphism values (lambda is 1^{1/3} in N, beta is 1^{1/3} in F)
+	* x = polygen(N)
+	* lam  = (1 - x^3).roots()[1][0]
+	*
+	* # random "bad pair"
+	* P = C.random_element()
+	* Q = -int(lam) * P
+	* print "    P: %x %x" % P.xy()
+	* print "    Q: %x %x" % Q.xy()
+	* print "P + Q: %x %x" % (P + Q).xy()
+	*/
+			GroupElementJacobian aj = GroupElementJacobian.SECP256K1_GEJ_CONST(
+				0x8d24cd95, 0x0a355af1, 0x3c543505, 0x44238d30,
+				0x0643d79f, 0x05a59614, 0x2f8ec030, 0xd58977cb,
+				0x001e337a, 0x38093dcd, 0x6c0f386d, 0x0b1293a8,
+				0x4d72c879, 0xd7681924, 0x44e6d2f3, 0x9190117d
+			);
+			GroupElementJacobian bj = GroupElementJacobian.SECP256K1_GEJ_CONST(
+				0xc7b74206, 0x1f788cd9, 0xabd0937d, 0x164a0d86,
+				0x95f6ff75, 0xf19a4ce9, 0xd013bd7b, 0xbf92d2a7,
+				0xffe1cc85, 0xc7f6c232, 0x93f0c792, 0xf4ed6c57,
+				0xb28d3786, 0x2897e6db, 0xbb192d0b, 0x6e6feab2
+			);
+			GroupElementJacobian sumj = GroupElementJacobian.SECP256K1_GEJ_CONST(
+				0x671a63c0, 0x3efdad4c, 0x389a7798, 0x24356027,
+				0xb3d69010, 0x278625c3, 0x5c86d390, 0x184a8f7a,
+				0x5f6409c2, 0x2ce01f2b, 0x511fd375, 0x25071d08,
+				0xda651801, 0x70e95caf, 0x8f0d893c, 0xbed8fbbe
+			);
+			GroupElement b;
+			GroupElementJacobian resj;
+			GroupElement res;
+			b = bj.ToGroupElement();
+
+			resj = aj.AddVariable(bj, out _);
+			res = resj.ToGroupElement();
+
+			ge_equals_gej(res, sumj);
+
+			resj = aj + b;
+
+			res = resj.ToGroupElement();
+
+			ge_equals_gej(res, sumj);
+
+			resj = aj.AddVariable(b, out _);
+			res = resj.ToGroupElement();
+			ge_equals_gej(res, sumj);
+		}
+
+		private void test_ge()
+		{
+			int i, i1;
+			int runs = 6;
+			/* Points: (infinity, p1, p1, -p1, -p1, p2, p2, -p2, -p2, p3, p3, -p3, -p3, p4, p4, -p4, -p4).
+     * The second in each pair of identical points uses a random Z coordinate in the Jacobian form.
+     * All magnitudes are randomized.
+     * All 17*17 combinations of points are added to each other, using all applicable methods.
+     *
+     * When the endomorphism code is compiled in, p5 = lambda*p1 and p6 = lambda^2*p1 are added as well.
+     */
+			GroupElement[] ge = new GroupElement[1 + 4 * runs];
+			GroupElementJacobian[] gej = new GroupElementJacobian[1 + 4 * runs];
+			FieldElement[] zinv = new FieldElement[1 + 4 * runs];
+			FieldElement zf;
+			FieldElement zfi2, zfi3;
+			gej[0] = GroupElementJacobian.Infinity;
+			ge[0] = default;
+			ge[0] = gej[0].ToGroupElementVariable();
+			for (i = 0; i < runs; i++)
+			{
+				int j;
+				GroupElement g = random_group_element_test();
+
+				if (i >= runs - 2)
+				{
+					g = ge[1].MultiplyLambda();
+				}
+				if (i >= runs - 1)
+				{
+					g = g.MultiplyLambda();
+				}
+
+				ge[1 + 4 * i] = g;
+				ge[2 + 4 * i] = g;
+				ge[3 + 4 * i] = g.Negate();
+				ge[4 + 4 * i] = g.Negate();
+				gej[1 + 4 * i] = ge[1 + 4 * i].ToGroupElementJacobian();
+
+
+				random_group_element_jacobian_test(ref gej[2 + 4 * i], ref ge[2 + 4 * i]);
+				gej[3 + 4 * i] = ge[3 + 4 * i].ToGroupElementJacobian();
+				random_group_element_jacobian_test(ref gej[4 + 4 * i], ref ge[4 + 4 * i]);
+				for (j = 0; j < 4; j++)
+				{
+					random_field_element_magnitude(ref ge[1 + j + 4 * i], 'x');
+					random_field_element_magnitude(ref ge[1 + j + 4 * i], 'y');
+					random_field_element_magnitude(ref gej[1 + j + 4 * i], 'x');
+					random_field_element_magnitude(ref gej[1 + j + 4 * i], 'y');
+					random_field_element_magnitude(ref gej[1 + j + 4 * i], 'z');
+				}
+			}
+
+			/* Compute z inverses. */
+			{
+				FieldElement[] zs = new FieldElement[1 + 4 * runs];
+				for (i = 0; i < 4 * runs + 1; i++)
+				{
+					if (i == 0)
+					{
+						/* The point at infinity does not have a meaningful z inverse. Any should do. */
+						do
+						{
+							zs[i] = random_field_element_test();
+						} while (zs[i].IsZero);
+					}
+					else
+					{
+						zs[i] = gej[i].z;
+					}
+				}
+				FieldElement.InverseAllVariable(zinv, zs, 4 * runs + 1);
+			}
+
+			/* Generate random zf, and zfi2 = 1/zf^2, zfi3 = 1/zf^3 */
+			do
+			{
+				zf = random_field_element_test();
+			} while (zf.IsZero);
+
+
+			random_field_element_magnitude(ref zf);
+			zfi3 = zf.InverseVariable();
+			zfi2 = zfi3.Sqr();
+			zfi3 = zfi3 * zfi2;
+
+			for (i1 = 0; i1 < 1 + 4 * runs; i1++)
+			{
+				int i2;
+				for (i2 = 0; i2 < 1 + 4 * runs; i2++)
+				{
+					/* Compute reference result using gej + gej (var). */
+					GroupElementJacobian refj, resj;
+					GroupElement @ref;
+					FieldElement zr = default;
+
+					if (gej[i1].IsInfinity)
+						refj = gej[i1].AddVariable(gej[i2], out _);
+					else
+						refj = gej[i1].AddVariable(gej[i2], out zr);
+
+					/* Check Z ratio. */
+					if (!gej[i1].IsInfinity && !refj.IsInfinity)
+					{
+						FieldElement zrz;
+						zrz = zr * gej[i1].z;
+						Assert.True(zrz.EqualsVariable(refj.z));
+					}
+					@ref = refj.ToGroupElementVariable();
+
+					/* Test gej + ge with Z ratio result (var). */
+					if (gej[i1].IsInfinity)
+						resj = gej[i1].AddVariable(ge[i2], out _);
+					else
+						resj = gej[i1].AddVariable(ge[i2], out zr);
+					ge_equals_gej(@ref, resj);
+					if (!gej[i1].IsInfinity && !resj.IsInfinity)
+					{
+						FieldElement zrz = zr * gej[i1].z;
+						Assert.True(zrz.EqualsVariable(resj.z));
+					}
+
+					/* Test gej + ge (var, with additional Z factor). */
+					{
+						GroupElement ge2_zfi = ge[i2]; /* the second term with x and y rescaled for z = 1/zf */
+						var ge2zfix = ge2_zfi.x * zfi2;
+						var ge2zfiy = ge2_zfi.y * zfi3;
+						random_field_element_magnitude(ref ge2zfix);
+						random_field_element_magnitude(ref ge2zfiy);
+						ge2_zfi = new GroupElement(ge2zfix, ge2zfiy, ge2_zfi.infinity);
+						resj = gej[i1].AddZInvVariable(ge2_zfi, zf);
+						ge_equals_gej(@ref, resj);
+					}
+
+					/* Test gej + ge (const). */
+					if (i2 != 0)
+					{
+						/* secp256k1_gej_add_ge does not support its second argument being infinity. */
+						resj = gej[i1] + ge[i2];
+						ge_equals_gej(@ref, resj);
+					}
+
+					/* Test doubling (var). */
+					if ((i1 == 0 && i2 == 0) || ((i1 + 3) / 4 == (i2 + 3) / 4 && ((i1 + 3) % 4) / 2 == ((i2 + 3) % 4) / 2))
+					{
+						FieldElement zr2;
+						/* Normal doubling with Z ratio result. */
+						resj = gej[i1].DoubleVariable(out zr2);
+						ge_equals_gej(@ref, resj);
+						/* Check Z ratio. */
+						zr2 = zr2 * gej[i1].z;
+						Assert.True(zr2.EqualsVariable(resj.z));
+						/* Normal doubling. */
+						resj = gej[i2].DoubleVariable(out _);
+						ge_equals_gej(@ref, resj);
+					}
+
+					/* Test adding opposites. */
+					if ((i1 == 0 && i2 == 0) || ((i1 + 3) / 4 == (i2 + 3) / 4 && ((i1 + 3) % 4) / 2 != ((i2 + 3) % 4) / 2))
+					{
+						Assert.True(@ref.IsInfinity);
+					}
+
+					/* Test adding infinity. */
+					if (i1 == 0)
+					{
+						Assert.True(ge[i1].IsInfinity);
+						Assert.True(gej[i1].IsInfinity);
+						ge_equals_gej(@ref, gej[i2]);
+					}
+					if (i2 == 0)
+					{
+						Assert.True(ge[i2].IsInfinity);
+						Assert.True(gej[i2].IsInfinity);
+						ge_equals_gej(@ref, gej[i1]);
+					}
+				}
+			}
+
+			/* Test adding all points together in random order equals infinity. */
+			{
+				GroupElementJacobian sum = GroupElementJacobian.Infinity;
+				GroupElementJacobian[] gej_shuffled = new GroupElementJacobian[4 * runs + 1];
+				for (i = 0; i < 4 * runs + 1; i++)
+				{
+					gej_shuffled[i] = gej[i];
+				}
+				for (i = 0; i < 4 * runs + 1; i++)
+				{
+					int swap = (int)(i + secp256k1_rand_int((uint)(4U * runs + 1U - i)));
+					if (swap != i)
+					{
+						GroupElementJacobian t = gej_shuffled[i];
+						gej_shuffled[i] = gej_shuffled[swap];
+						gej_shuffled[swap] = t;
+					}
+				}
+				for (i = 0; i < 4 * runs + 1; i++)
+				{
+					sum = sum.AddVariable(gej_shuffled[i], out _);
+				}
+				Assert.True(sum.IsInfinity);
+			}
+
+			/* Test batch gej -> ge conversion with and without known z ratios. */
+			{
+				FieldElement[] zr = new FieldElement[4 * runs + 1];
+				GroupElement[] ge_set_all = new GroupElement[4 * runs + 1];
+				for (i = 0; i < 4 * runs + 1; i++)
+				{
+					/* Compute gej[i + 1].z / gez[i].z (with gej[n].z taken to be 1). */
+					if (i < 4 * runs)
+					{
+						zr[i + 1] = zinv[i] * gej[i + 1].z;
+					}
+				}
+
+				GroupElement.SetAllGroupElementJacobianVariable(ge_set_all, gej, 4 * runs + 1);
+				for (i = 0; i < 4 * runs + 1; i++)
+				{
+					FieldElement s = random_fe_non_zero();
+					gej[i] = gej[i].Rescale(s);
+					ge_equals_gej(ge_set_all[i], gej[i]);
+				}
+			}
+
+			/* Test batch gej -> ge conversion with many infinities. */
+			for (i = 0; i < 4 * runs + 1; i++)
+			{
+				ge[i] = random_group_element_test();
+				/* randomly set half the points to infinity */
+				if (ge[i].x.IsOdd)
+				{
+					ge[i] = GroupElement.Infinity;
+				}
+				gej[i] = ge[i].ToGroupElementJacobian();
+			}
+			/* batch invert */
+			GroupElement.SetAllGroupElementJacobianVariable(ge, gej, 4 * runs + 1);
+			/* check result */
+			for (i = 0; i < 4 * runs + 1; i++)
+			{
+				ge_equals_gej(ge[i], gej[i]);
+			}
+		}
+
+		void ge_equals_gej(in GroupElement a, in GroupElementJacobian b)
+		{
+			FieldElement z2s;
+			FieldElement u1, u2, s1, s2;
+			if (a.infinity != b.infinity)
+			{
+
+			}
+			Assert.True(a.infinity == b.infinity);
+			if (a.infinity)
+			{
+				return;
+			}
+			/* Check a.x * b.z^2 == b.x && a.y * b.z^3 == b.y, to avoid inverses. */
+			z2s = b.z.Sqr();
+			u1 = a.x * z2s;
+			u2 = b.x;
+			u2 = u2.NormalizeWeak();
+			s1 = a.y * z2s;
+			s1 = s1 * b.z;
+			s2 = b.y;
+			s2 = s2.NormalizeWeak();
+			Assert.True(u1.EqualsVariable(u2));
+			Assert.True(s1.EqualsVariable(s2));
+		}
+		void random_field_element_magnitude(ref GroupElement ge, char coordinate)
+		{
+			switch (coordinate)
+			{
+				case 'x':
+					{
+						var x = ge.x;
+						random_field_element_magnitude(ref x);
+						ge = new GroupElement(x, ge.y, ge.infinity);
+					}
+					break;
+				case 'y':
+					{
+						var y = ge.y;
+						random_field_element_magnitude(ref y);
+						ge = new GroupElement(ge.x, y, ge.infinity);
+					}
+					break;
+			}
+		}
+		void random_field_element_magnitude(ref GroupElementJacobian ge, char coordinate)
+		{
+			switch (coordinate)
+			{
+				case 'x':
+					{
+						var x = ge.x;
+						random_field_element_magnitude(ref x);
+						ge = new GroupElementJacobian(x, ge.y, ge.z, ge.infinity);
+					}
+					break;
+				case 'y':
+					{
+						var y = ge.y;
+						random_field_element_magnitude(ref y);
+						ge = new GroupElementJacobian(ge.x, y, ge.z, ge.infinity);
+					}
+					break;
+				case 'z':
+					{
+						var z = ge.z;
+						random_field_element_magnitude(ref z);
+						ge = new GroupElementJacobian(ge.x, ge.y, z, ge.infinity);
+					}
+					break;
+			}
+		}
+		void random_field_element_magnitude(ref FieldElement fe)
+		{
+			FieldElement zero;
+			var n = secp256k1_rand_int(9U);
+			fe = fe.Normalize();
+			if (n == 0)
+			{
+				return;
+			}
+			zero = default;
+			zero = zero.Negate(0);
+			zero = zero * (n - 1);
+			fe += zero;
+			Assert.True(fe.magnitude == n);
+		}
+
+		private void random_group_element_jacobian_test(ref GroupElementJacobian gej, ref GroupElement ge)
+		{
+			FieldElement z2, z3;
+			var (gex, gey, geinfinity) = ge;
+			var (gejx, gejy, gejz, gejinfinity) = gej;
+			do
+			{
+				gejz = random_field_element_test();
+				if (!gejz.IsZero)
+				{
+					break;
+				}
+			} while (true);
+			z2 = gejz.Sqr();
+			z3 = z2 * gejz;
+			gejx = gex * z2;
+			gejy = gey * z3;
+			gejinfinity = geinfinity;
+			gej = new GroupElementJacobian(gejx, gejy, gejz, gejinfinity);
+			ge = new GroupElement(gex, gey, geinfinity);
+		}
+
+		private GroupElement random_group_element_test()
+		{
+			FieldElement fe;
+			GroupElement ge;
+			do
+			{
+				fe = random_field_element_test();
+				if (GroupElement.TryCreateXOVariable(fe, secp256k1_rand_bits(1) == 1, out ge))
+				{
+					ge = ge.NormalizeY();
+					break;
+				}
+			} while (true);
+			return ge;
+		}
+
 		private int fe_memcmp(FieldElement a, FieldElement b)
 		{
 			for (int i = 0; i < 9; i++)
@@ -295,16 +781,7 @@ namespace NBitcoin.Tests
 
 		private FieldElement SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
 		{
-			return new FieldElement((d0) & 0x3FFFFFFU,
-	(((uint)d0) >> 26) | (((uint)(d1) & 0xFFFFFU) << 6),
-	(((uint)d1) >> 20) | (((uint)(d2) & 0x3FFFU) << 12),
-	(((uint)d2) >> 14) | (((uint)(d3) & 0xFFU) << 18),
-	(((uint)d3) >> 8) | (((uint)(d4) & 0x3U) << 24),
-	(((uint)d4) >> 2) & 0x3FFFFFFU,
-	(((uint)d4) >> 28) | (((uint)(d5) & 0x3FFFFFU) << 4),
-	(((uint)d5) >> 22) | (((uint)(d6) & 0xFFFFU) << 10),
-	(((uint)d6) >> 16) | (((uint)(d7) & 0x3FFU) << 16),
-	(((uint)d7) >> 10), 1, true);
+			return FieldElement.SECP256K1_FE_CONST(d7, d6, d5, d4, d3, d2, d1, d0);
 		}
 
 		private FieldElementStorage SECP256K1_FE_STORAGE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
