@@ -4,7 +4,7 @@ using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	public readonly struct GroupElementStorage
+	readonly struct GroupElementStorage
 	{
 		readonly FieldElementStorage x;
 		readonly FieldElementStorage y;

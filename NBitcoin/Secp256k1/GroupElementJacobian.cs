@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	public readonly struct GroupElementJacobian
+	readonly struct GroupElementJacobian
 	{
 		internal readonly FieldElement x; /* actual X: x/z^2 */
 		internal readonly FieldElement y;  /* actual Y: y/z^3 */
@@ -427,6 +428,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		static readonly FieldElement fe_1 = FieldElement.SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElementJacobian Add(in GroupElement b)
 		{
 			ref readonly GroupElementJacobian a = ref this;
@@ -514,8 +516,8 @@ namespace NBitcoin.Secp256k1
 			rr_alt *= 2U;       /* rr = Y1*Z2^3 - Y2*Z1^3 (2) */
 			m_alt += u1;          /* Malt = X1*Z2^2 - X2*Z1^2 */
 
-			rr_alt = rr_alt.CMov(rr, degenerate != 0 ? 0 : 1);
-			m_alt = m_alt.CMov(m, degenerate != 0 ? 0 : 1);
+			FieldElement.CMov(ref rr_alt, rr, degenerate != 0 ? 0 : 1);
+			FieldElement.CMov(ref m_alt, m, degenerate != 0 ? 0 : 1);
 			/* Now Ralt / Malt = lambda and is guaranteed not to be 0/0.
 			 * From here on out Ralt and Malt represent the numerator
 			 * and denominator of lambda; R and M represent the explicit
@@ -527,7 +529,7 @@ namespace NBitcoin.Secp256k1
 			 * zero (which is "computed" by cmov). So the cost is one squaring
 			 * versus two multiplications. */
 			n = n.Sqr();
-			n = n.CMov(m, degenerate);              /* n = M^3 * Malt (2) */
+			FieldElement.CMov(ref n, m, degenerate);              /* n = M^3 * Malt (2) */
 			t = rr_alt.Sqr();                      /* t = Ralt^2 (1) */
 			rz = a.z * m_alt;             /* rz = Malt*Z (1) */
 			infinity = (rz.NormalizesToZero() ? 1 : 0) * (1 - (a.infinity ? 1 : 0));
@@ -546,9 +548,9 @@ namespace NBitcoin.Secp256k1
 			ry *= 4U;                     /* ry = Y3 = 4*Ralt*(Q - 2x3) - 4*M^3*Malt (4) */
 
 			/** In case a.infinity == 1, replace r with (b.x, b.y, 1). */
-			rx = rx.CMov(b.x, a.infinity ? 1 : 0);
-			ry = ry.CMov(b.y, a.infinity ? 1 : 0);
-			rz = rz.CMov(fe_1, a.infinity ? 1 : 0);
+			FieldElement.CMov(ref rx, b.x, a.infinity ? 1 : 0);
+			FieldElement.CMov(ref ry, b.y, a.infinity ? 1 : 0);
+			FieldElement.CMov(ref rz, fe_1, a.infinity ? 1 : 0);
 			rinfinity = infinity == 1;
 			return new GroupElementJacobian(rx, ry, rz, rinfinity);
 		}
@@ -565,7 +567,7 @@ namespace NBitcoin.Secp256k1
 			rz *= s; /* r->z *= s   */
 			return new GroupElementJacobian(rx, ry, rz, rinfinity);
 		}
-
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static GroupElementJacobian operator +(in GroupElementJacobian a, in GroupElement b)
 		{
 			return a.Add(b);

@@ -6,7 +6,7 @@ using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	public readonly struct FieldElement : IEquatable<FieldElement>
+	readonly struct FieldElement : IEquatable<FieldElement>
 	{
 		readonly uint n0, n1, n2, n3, n4, n5, n6, n7, n8, n9;
 		internal readonly int magnitude;
@@ -1173,9 +1173,9 @@ namespace NBitcoin.Secp256k1
 		}
 
 		[MethodImpl(MethodImplOptions.NoOptimization)]
-		public FieldElement CMov(FieldElement a, int flag)
+		public static void CMov(ref FieldElement r, FieldElement a, int flag)
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
+			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = r;
 			uint mask0, mask1;
 			mask0 = (uint)flag + ~((uint)0);
 			mask1 = ~mask0;
@@ -1194,7 +1194,7 @@ namespace NBitcoin.Secp256k1
 				magnitude = a.magnitude;
 			}
 			normalized &= a.normalized;
-			return new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 		}
 
 		public FieldElement(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9, int magnitude, bool normalized)
@@ -1577,14 +1577,17 @@ namespace NBitcoin.Secp256k1
 		{
 			return !a.Equals(b);
 		}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static FieldElement operator *(in FieldElement a, in FieldElement b)
 		{
 			return a.Multiply(b);
 		}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static FieldElement operator *(in FieldElement a, in uint b)
 		{
 			return a.Multiply(b);
 		}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static FieldElement operator +(in FieldElement a, in FieldElement b)
 		{
 			return a.Add(b);

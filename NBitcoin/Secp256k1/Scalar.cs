@@ -941,10 +941,27 @@ namespace NBitcoin.Secp256k1
 		{
 			return !a.Equals(b);
 		}
-
 		public static Scalar operator +(in Scalar a, in Scalar b)
 		{
 			return a.Add(b);
+		}
+
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public readonly override int GetHashCode()
+		{
+			unchecked
+			{
+				int hash = 17;
+				hash = hash * 23 + d0.GetHashCode();
+				hash = hash * 23 + d1.GetHashCode();
+				hash = hash * 23 + d2.GetHashCode();
+				hash = hash * 23 + d3.GetHashCode();
+				hash = hash * 23 + d4.GetHashCode();
+				hash = hash * 23 + d5.GetHashCode();
+				hash = hash * 23 + d6.GetHashCode();
+				hash = hash * 23 + d7.GetHashCode();
+				return hash;
+			}
 		}
 	}
 }

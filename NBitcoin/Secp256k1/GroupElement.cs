@@ -6,7 +6,7 @@ using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	public readonly struct GroupElement
+	readonly struct GroupElement
 	{
 		internal readonly FieldElement x;
 		internal readonly FieldElement y;
@@ -15,6 +15,7 @@ namespace NBitcoin.Secp256k1
 		public static ref readonly GroupElement Infinity => ref _Infinity;
 		public readonly bool IsInfinity
 		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
 			get
 			{
 				return infinity;
@@ -165,7 +166,7 @@ namespace NBitcoin.Secp256k1
 			y = this.y;
 			infinity = this.infinity;
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElement ZInv(in GroupElement a, in FieldElement zi)
 		{
 			var (x, y, infinity) = this;
@@ -188,6 +189,7 @@ namespace NBitcoin.Secp256k1
 			return new GroupElement(x, this.y.NormalizeVariable(), infinity);
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElement Negate()
 		{
 			var ry = y.NormalizeWeak();

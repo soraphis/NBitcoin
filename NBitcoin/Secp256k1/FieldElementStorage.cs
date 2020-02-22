@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	public readonly struct FieldElementStorage
+	readonly struct FieldElementStorage
 	{
 		readonly uint n0, n1, n2, n3, n4, n5, n6, n7;
 
@@ -41,7 +42,7 @@ namespace NBitcoin.Secp256k1
 			n6 = this.n6;
 			n7 = this.n7;
 		}
-
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement ToFieldElement()
 		{
 			ref readonly FieldElementStorage a = ref this;
@@ -68,10 +69,10 @@ namespace NBitcoin.Secp256k1
 			if (!value)
 				throw new InvalidOperationException("VERIFY_CHECK failed (bug in C# secp256k1)");
 		}
-
-		public readonly FieldElementStorage CMov(in FieldElementStorage a, int flag)
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public static void CMov(ref FieldElementStorage r, in FieldElementStorage a, int flag)
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7) = this;
+			var (n0, n1, n2, n3, n4, n5, n6, n7) = r;
 			uint mask0, mask1;
 			mask0 = (uint)flag + ~((uint)0);
 			mask1 = ~mask0;
@@ -83,7 +84,7 @@ namespace NBitcoin.Secp256k1
 			n5 = (n5 & mask0) | (a.n5 & mask1);
 			n6 = (n6 & mask0) | (a.n6 & mask1);
 			n7 = (n7 & mask0) | (a.n7 & mask1);
-			return new FieldElementStorage(n0, n1, n2, n3, n4, n5, n6, n7);
+			r = new FieldElementStorage(n0, n1, n2, n3, n4, n5, n6, n7);
 		}
 	}
 }
