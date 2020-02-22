@@ -211,5 +211,11 @@ namespace NBitcoin.Secp256k1
 			b.AppendLine($"secp256k1_ge {varName} = {{ {varName}x, {varName}y, {varName}infinity }};");
 			return b.ToString();
 		}
+
+		public readonly GroupElementStorage ToStorage()
+		{
+			VERIFY_CHECK(!infinity);
+			return new GroupElementStorage(x, y);
+		}
 	}
 }
