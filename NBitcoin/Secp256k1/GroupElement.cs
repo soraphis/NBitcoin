@@ -187,7 +187,7 @@ namespace NBitcoin.Secp256k1
 			b.AppendLine(y.ToC($"{varName}y"));
 			var infinitystr = infinity ? 1 : 0;
 			b.AppendLine($"int {varName}infinity = {infinitystr};");
-			b.AppendLine($"secp256k1_gej {varName} = {{ {varName}x, {varName}y, {varName}infinity }};");
+			b.AppendLine($"secp256k1_ge {varName} = {{ {varName}x, {varName}y, {varName}infinity }};");
 			return b.ToString();
 		}
 	}
