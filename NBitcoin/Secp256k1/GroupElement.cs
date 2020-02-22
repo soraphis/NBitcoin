@@ -23,6 +23,27 @@ namespace NBitcoin.Secp256k1
 
 		static readonly GroupElement _Zero = new GroupElement(FieldElement.Zero, FieldElement.Zero, false);
 		public static ref readonly GroupElement Zero => ref _Zero;
+
+		public bool IsValidVariable
+		{
+			get
+			{
+				FieldElement y2, x3, c;
+				if (infinity)
+				{
+					return false;
+				}
+				/* y^2 = x^3 + 7 */
+				y2 = y.Sqr();
+				x3 = x.Sqr();
+				x3 = x3 * x;
+				c = new FieldElement(FieldElement.CURVE_B);
+				x3 += c;
+				x3 = x3.NormalizeWeak();
+				return y2.EqualsVariable(x3);
+			}
+		}
+
 		const int SIZE_MAX = int.MaxValue;
 		public static void SetAllGroupElementJacobianVariable(GroupElement[] r, GroupElementJacobian[] a, int len)
 		{
@@ -150,7 +171,7 @@ namespace NBitcoin.Secp256k1
 			var (x, y, infinity) = this;
 			FieldElement zi2 = zi.Sqr();
 			FieldElement zi3 = zi2 * zi;
-			x = a.x* zi2;
+			x = a.x * zi2;
 			y = a.y * zi3;
 			infinity = a.infinity;
 			return new GroupElement(x, y, infinity);

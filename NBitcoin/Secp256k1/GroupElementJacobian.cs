@@ -119,6 +119,33 @@ namespace NBitcoin.Secp256k1
 			return new GroupElementJacobian(rx, ry, rz, rinfinity);
 		}
 
+		public readonly bool IsValidVariable
+		{
+			get
+			{
+				FieldElement y2, x3, z2, z6;
+				if (infinity)
+				{
+					return false;
+				}
+				/** y^2 = x^3 + 7
+				 *  (Y/Z^3)^2 = (X/Z^2)^3 + 7
+				 *  Y^2 / Z^6 = X^3 / Z^6 + 7
+				 *  Y^2 = X^3 + 7*Z^6
+				 */
+				y2 = y.Sqr();
+				x3 = x.Sqr();
+				x3 = x3 * x;
+				z2 = z.Sqr();
+				z6 = z2.Sqr();
+				z6 = z6 * z2;
+				z6 *= FieldElement.CURVE_B;
+				x3 += z6;
+				x3 = x3.NormalizeWeak();
+				return y2.EqualsVariable(x3);
+			}
+		}
+
 		public readonly GroupElement ToGroupElementZInv(in FieldElement zi)
 		{
 			ref readonly GroupElementJacobian a = ref this;

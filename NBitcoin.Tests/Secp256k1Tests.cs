@@ -53,6 +53,37 @@ namespace NBitcoin.Tests
 			}
 		}
 
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_point_times_order()
+		{
+			int i;
+			FieldElement x = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 2);
+			FieldElement xr = SECP256K1_FE_CONST(
+				0x7603CB59, 0xB0EF6C63, 0xFE608479, 0x2A0C378C,
+				0xDB3233A8, 0x0F8A9A09, 0xA877DEAD, 0x31B38C45
+			);
+			for (i = 0; i < 500; i++)
+			{
+				if (GroupElement.TryCreateXOVariable(x, true, out GroupElement p))
+				{
+					GroupElementJacobian j;
+					Assert.True(p.IsValidVariable);
+					j = p.ToGroupElementJacobian();
+					Assert.True(j.IsValidVariable);
+					test_point_times_order(j);
+				}
+				x = x.Sqr();
+			}
+			x = x.NormalizeVariable();
+			Assert.True(x.EqualsVariable(xr));
+		}
+
+		private void test_point_times_order(GroupElementJacobian j)
+		{
+			
+		}
+
 		private void test_group_decompress(FieldElement x)
 		{
 			/* The input itself, normalized. */
