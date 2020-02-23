@@ -16,21 +16,6 @@ namespace NBitcoin.Secp256k1
 
 		public static ref readonly FieldElement Zero => ref _Zero;
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
-		public static FieldElement SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
-		{
-			return new FieldElement((d0) & 0x3FFFFFFU,
-	(((uint)d0) >> 26) | (((uint)(d1) & 0xFFFFFU) << 6),
-	(((uint)d1) >> 20) | (((uint)(d2) & 0x3FFFU) << 12),
-	(((uint)d2) >> 14) | (((uint)(d3) & 0xFFU) << 18),
-	(((uint)d3) >> 8) | (((uint)(d4) & 0x3U) << 24),
-	(((uint)d4) >> 2) & 0x3FFFFFFU,
-	(((uint)d4) >> 28) | (((uint)(d5) & 0x3FFFFFU) << 4),
-	(((uint)d5) >> 22) | (((uint)(d6) & 0xFFFFU) << 10),
-	(((uint)d6) >> 16) | (((uint)(d7) & 0x3FFU) << 16),
-	(((uint)d7) >> 10), 1, true);
-		}
-
 		public FieldElement(uint a)
 		{
 			n0 = a;
@@ -59,6 +44,22 @@ namespace NBitcoin.Secp256k1
 			normalized = true;
 			VERIFY();
 		}
+
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public static FieldElement SECP256K1_FE_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
+		{
+			return new FieldElement((d0) & 0x3FFFFFFU,
+	(((uint)d0) >> 26) | (((uint)(d1) & 0xFFFFFU) << 6),
+	(((uint)d1) >> 20) | (((uint)(d2) & 0x3FFFU) << 12),
+	(((uint)d2) >> 14) | (((uint)(d3) & 0xFFU) << 18),
+	(((uint)d3) >> 8) | (((uint)(d4) & 0x3U) << 24),
+	(((uint)d4) >> 2) & 0x3FFFFFFU,
+	(((uint)d4) >> 28) | (((uint)(d5) & 0x3FFFFFU) << 4),
+	(((uint)d5) >> 22) | (((uint)(d6) & 0xFFFFU) << 10),
+	(((uint)d6) >> 16) | (((uint)(d7) & 0x3FFU) << 16),
+	(((uint)d7) >> 10), 1, true);
+		}
+
 
 		public readonly bool NormalizesToZeroVariable()
 		{

@@ -14,28 +14,6 @@ namespace NBitcoin.Secp256k1
 		internal readonly bool infinity; /* whether this represents the point at infinity */
 		static readonly GroupElementJacobian _Infinity = new GroupElementJacobian(FieldElement.Zero, FieldElement.Zero, FieldElement.Zero, true);
 		public static ref readonly GroupElementJacobian Infinity => ref _Infinity;
-		public readonly bool IsInfinity
-		{
-			get
-			{
-				return infinity;
-			}
-		}
-
-		public readonly bool HasQuadYVariable
-		{
-			get
-			{
-				if (infinity)
-				{
-					return false;
-				}
-				/* We rely on the fact that the Jacobi symbol of 1 / a->z^3 is the same as
-				 * that of a->z. Thus a->y / a->z^3 is a quadratic residue iff a->y * a->z
-				   is */
-				return (y * z).IsQuadVariable;
-			}
-		}
 
 		public GroupElementJacobian(in FieldElement x, in FieldElement y, in FieldElement z, bool infinity)
 		{
@@ -51,13 +29,32 @@ namespace NBitcoin.Secp256k1
 			this.z = z;
 			this.infinity = false;
 		}
-		public readonly void Deconstruct(out FieldElement x, out FieldElement y, out FieldElement z, out bool infinity)
+
+		public readonly bool IsInfinity
 		{
-			x = this.x;
-			y = this.y;
-			z = this.z;
-			infinity = this.infinity;
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get
+			{
+				return infinity;
+			}
 		}
+
+		public readonly bool HasQuadYVariable
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get
+			{
+				if (infinity)
+				{
+					return false;
+				}
+				/* We rely on the fact that the Jacobi symbol of 1 / a->z^3 is the same as
+				 * that of a->z. Thus a->y / a->z^3 is a quadratic residue iff a->y * a->z
+				   is */
+				return (y * z).IsQuadVariable;
+			}
+		}
+
 		public readonly GroupElementJacobian AddVariable(in GroupElement b, out FieldElement rzr)
 		{
 			ref readonly GroupElementJacobian a = ref this;
@@ -147,6 +144,7 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElement ToGroupElementZInv(in FieldElement zi)
 		{
 			ref readonly GroupElementJacobian a = ref this;
@@ -157,6 +155,7 @@ namespace NBitcoin.Secp256k1
 			return new GroupElement(rx, ry, a.infinity);
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElementJacobian Negate()
 		{
 			return new GroupElementJacobian(x, y.NormalizeWeak().Negate(1), z, infinity);
@@ -337,6 +336,7 @@ namespace NBitcoin.Secp256k1
 			if (!value)
 				throw new InvalidOperationException("VERIFY_CHECK failed (bug in C# secp256k1)");
 		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElementJacobian DoubleNonZero()
 		{
 			ref readonly GroupElementJacobian a = ref this;
@@ -398,6 +398,8 @@ namespace NBitcoin.Secp256k1
 			y = ay;
 			return new GroupElement(x, y, infinity);
 		}
+
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElement ToGroupElement()
 		{
 			ref readonly GroupElementJacobian a = ref this;
@@ -555,6 +557,7 @@ namespace NBitcoin.Secp256k1
 			return new GroupElementJacobian(rx, ry, rz, rinfinity);
 		}
 
+		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly GroupElementJacobian Rescale(in FieldElement s)
 		{
 			var (rx, ry, rz, rinfinity) = this;
@@ -571,6 +574,14 @@ namespace NBitcoin.Secp256k1
 		public static GroupElementJacobian operator +(in GroupElementJacobian a, in GroupElement b)
 		{
 			return a.Add(b);
+		}
+
+		public readonly void Deconstruct(out FieldElement x, out FieldElement y, out FieldElement z, out bool infinity)
+		{
+			x = this.x;
+			y = this.y;
+			z = this.z;
+			infinity = this.infinity;
 		}
 
 		public readonly string ToC(string varName)

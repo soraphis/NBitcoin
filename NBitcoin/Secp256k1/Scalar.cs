@@ -8,138 +8,6 @@ namespace NBitcoin.Secp256k1
 {
 	readonly struct Scalar : IEquatable<Scalar>
 	{
-		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void muladd(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
-		{
-			uint tl, th;
-			{
-				ulong t = (ulong)a * b;
-				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
-				tl = (uint)t;
-			}
-			c0 += tl;                 /* overflow is handled on the next line */
-			th += (c0 < tl) ? 1U : 0;  /* at most 0xFFFFFFFF */
-			c1 += th;                 /* overflow is handled on the next line */
-			c2 += (c1 < th) ? 1U : 0;  /* never overflows by contract (verified in the next line) */
-			VERIFY_CHECK((c1 >= th) || (c2 != 0));
-		}
-
-		/** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void muladd_fast(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
-		{
-			uint tl, th;
-			{
-				ulong t = (ulong)a * b;
-				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
-				tl = (uint)t;
-			}
-			c0 += tl;                 /* overflow is handled on the next line */
-			th += (c0 < tl) ? 1U : 0U;  /* at most 0xFFFFFFFF */
-			c1 += th;                 /* never overflows by contract (verified in the next line) */
-			VERIFY_CHECK(c1 >= th);
-		}
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void muladd2(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
-		{
-			uint tl, th, th2, tl2;
-			{
-				ulong t = (ulong)a * b;
-				th = (uint)(t >> 32);               /* at most 0xFFFFFFFE */
-				tl = (uint)t;
-			}
-			th2 = th + th;                  /* at most 0xFFFFFFFE (in case th was 0x7FFFFFFF) */
-			c2 += (th2 < th) ? 1U : 0;       /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((th2 >= th) || (c2 != 0));
-			tl2 = tl + tl;                  /* at most 0xFFFFFFFE (in case the lowest 63 bits of tl were 0x7FFFFFFF) */
-			th2 += (tl2 < tl) ? 1U : 0;      /* at most 0xFFFFFFFF */
-			c0 += tl2;                      /* overflow is handled on the next line */
-			th2 += (c0 < tl2) ? 1U : 0;      /* second overflow is handled on the next line */
-			c2 += (c0 < tl2 ? 1U : 0) & (th2 == 0 ? 1U : 0);  /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c0 >= tl2) || (th2 != 0) || (c2 != 0));
-			c1 += th2;                      /* overflow is handled on the next line */
-			c2 += (c1 < th2) ? 1U : 0;       /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c1 >= th2) || (c2 != 0));
-		}
-
-		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void sumadd(ref uint c0, ref uint c1, ref uint c2, uint a)
-		{
-			uint over;
-			c0 += (a);                  /* overflow is handled on the next line */
-			over = (c0 < (a)) ? 1U : 0;
-			c1 += over;                 /* overflow is handled on the next line */
-			c2 += (c1 < over) ? 1U : 0;  /* never overflows by contract */
-		}
-
-		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void sumadd_fast(ref uint c0, ref uint c1, ref uint c2, uint a)
-		{
-			c0 += (a);                 /* overflow is handled on the next line */
-			c1 += (c0 < (a)) ? 1U : 0;  /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c1 != 0) | (c0 >= (a)));
-			VERIFY_CHECK(c2 == 0);
-		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
-		public readonly Scalar Add(in Scalar b)
-		{
-			return Add(b, out _);
-		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
-		public readonly Scalar Add(in Scalar b, out int overflow)
-		{
-			uint d0;
-			uint d1;
-			uint d2;
-			uint d3;
-			uint d4;
-			uint d5;
-			uint d6;
-			uint d7;
-			ref readonly Scalar a = ref this;
-			ulong t = (ulong)a.d0 + b.d0;
-			d0 = (uint)t; t >>= 32;
-			t += (ulong)a.d1 + b.d1;
-			d1 = (uint)t; t >>= 32;
-			t += (ulong)a.d2 + b.d2;
-			d2 = (uint)t; t >>= 32;
-			t += (ulong)a.d3 + b.d3;
-			d3 = (uint)t; t >>= 32;
-			t += (ulong)a.d4 + b.d4;
-			d4 = (uint)t; t >>= 32;
-			t += (ulong)a.d5 + b.d5;
-			d5 = (uint)t; t >>= 32;
-			t += (ulong)a.d6 + b.d6;
-			d6 = (uint)t; t >>= 32;
-			t += (ulong)a.d7 + b.d7;
-			d7 = (uint)t; t >>= 32;
-			overflow = (int)(t + (uint)new Scalar(d0, d1, d2, d3, d4, d5, d6, d7).CheckOverflow());
-			VERIFY_CHECK(overflow == 0 || overflow == 1);
-			Reduce(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, overflow);
-			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
-		}
-		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
-		static void extract(ref uint c0, ref uint c1, ref uint c2, out uint n)
-		{
-			(n) = c0;
-			c0 = c1;
-			c1 = c2;
-			c2 = 0;
-		}
-		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
-		static void extract_fast(ref uint c0, ref uint c1, ref uint c2, out uint n)
-		{
-			(n) = c0;
-			c0 = c1;
-			c1 = 0;
-			VERIFY_CHECK(c2 == 0);
-		}
-
 		static readonly Scalar _Zero = new Scalar(0, 0, 0, 0, 0, 0, 0, 0);
 		public static ref readonly Scalar Zero => ref _Zero;
 		static readonly Scalar _One = new Scalar(1, 0, 0, 0, 0, 0, 0, 0);
@@ -541,6 +409,137 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(c1 == 0);
 			l[15] = c0;
 		}
+		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		static void muladd(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
+		{
+			uint tl, th;
+			{
+				ulong t = (ulong)a * b;
+				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
+				tl = (uint)t;
+			}
+			c0 += tl;                 /* overflow is handled on the next line */
+			th += (c0 < tl) ? 1U : 0;  /* at most 0xFFFFFFFF */
+			c1 += th;                 /* overflow is handled on the next line */
+			c2 += (c1 < th) ? 1U : 0;  /* never overflows by contract (verified in the next line) */
+			VERIFY_CHECK((c1 >= th) || (c2 != 0));
+		}
+
+		/** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		static void muladd_fast(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
+		{
+			uint tl, th;
+			{
+				ulong t = (ulong)a * b;
+				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
+				tl = (uint)t;
+			}
+			c0 += tl;                 /* overflow is handled on the next line */
+			th += (c0 < tl) ? 1U : 0U;  /* at most 0xFFFFFFFF */
+			c1 += th;                 /* never overflows by contract (verified in the next line) */
+			VERIFY_CHECK(c1 >= th);
+		}
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		static void muladd2(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
+		{
+			uint tl, th, th2, tl2;
+			{
+				ulong t = (ulong)a * b;
+				th = (uint)(t >> 32);               /* at most 0xFFFFFFFE */
+				tl = (uint)t;
+			}
+			th2 = th + th;                  /* at most 0xFFFFFFFE (in case th was 0x7FFFFFFF) */
+			c2 += (th2 < th) ? 1U : 0;       /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((th2 >= th) || (c2 != 0));
+			tl2 = tl + tl;                  /* at most 0xFFFFFFFE (in case the lowest 63 bits of tl were 0x7FFFFFFF) */
+			th2 += (tl2 < tl) ? 1U : 0;      /* at most 0xFFFFFFFF */
+			c0 += tl2;                      /* overflow is handled on the next line */
+			th2 += (c0 < tl2) ? 1U : 0;      /* second overflow is handled on the next line */
+			c2 += (c0 < tl2 ? 1U : 0) & (th2 == 0 ? 1U : 0);  /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((c0 >= tl2) || (th2 != 0) || (c2 != 0));
+			c1 += th2;                      /* overflow is handled on the next line */
+			c2 += (c1 < th2) ? 1U : 0;       /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((c1 >= th2) || (c2 != 0));
+		}
+
+		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		static void sumadd(ref uint c0, ref uint c1, ref uint c2, uint a)
+		{
+			uint over;
+			c0 += (a);                  /* overflow is handled on the next line */
+			over = (c0 < (a)) ? 1U : 0;
+			c1 += over;                 /* overflow is handled on the next line */
+			c2 += (c1 < over) ? 1U : 0;  /* never overflows by contract */
+		}
+
+		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
+		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		static void sumadd_fast(ref uint c0, ref uint c1, ref uint c2, uint a)
+		{
+			c0 += (a);                 /* overflow is handled on the next line */
+			c1 += (c0 < (a)) ? 1U : 0;  /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((c1 != 0) | (c0 >= (a)));
+			VERIFY_CHECK(c2 == 0);
+		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public readonly Scalar Add(in Scalar b)
+		{
+			return Add(b, out _);
+		}
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public readonly Scalar Add(in Scalar b, out int overflow)
+		{
+			uint d0;
+			uint d1;
+			uint d2;
+			uint d3;
+			uint d4;
+			uint d5;
+			uint d6;
+			uint d7;
+			ref readonly Scalar a = ref this;
+			ulong t = (ulong)a.d0 + b.d0;
+			d0 = (uint)t; t >>= 32;
+			t += (ulong)a.d1 + b.d1;
+			d1 = (uint)t; t >>= 32;
+			t += (ulong)a.d2 + b.d2;
+			d2 = (uint)t; t >>= 32;
+			t += (ulong)a.d3 + b.d3;
+			d3 = (uint)t; t >>= 32;
+			t += (ulong)a.d4 + b.d4;
+			d4 = (uint)t; t >>= 32;
+			t += (ulong)a.d5 + b.d5;
+			d5 = (uint)t; t >>= 32;
+			t += (ulong)a.d6 + b.d6;
+			d6 = (uint)t; t >>= 32;
+			t += (ulong)a.d7 + b.d7;
+			d7 = (uint)t; t >>= 32;
+			overflow = (int)(t + (uint)new Scalar(d0, d1, d2, d3, d4, d5, d6, d7).CheckOverflow());
+			VERIFY_CHECK(overflow == 0 || overflow == 1);
+			Reduce(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, overflow);
+			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
+		}
+		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		static void extract(ref uint c0, ref uint c1, ref uint c2, out uint n)
+		{
+			(n) = c0;
+			c0 = c1;
+			c1 = c2;
+			c2 = 0;
+		}
+		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		static void extract_fast(ref uint c0, ref uint c1, ref uint c2, out uint n)
+		{
+			(n) = c0;
+			c0 = c1;
+			c1 = 0;
+			VERIFY_CHECK(c2 == 0);
+		}
 
 		[Conditional("SECP256K1_VERIFY")]
 		private static void VERIFY_CHECK(bool value)
@@ -752,27 +751,6 @@ namespace NBitcoin.Secp256k1
 			r = r.CAddBit(0, (int)((l[(shift - 1) >> 5] >> ((shift - 1) & 0x1f)) & 1));
 			return r;
 		}
-
-		public readonly void Deconstruct(
-				out uint d0,
-				out uint d1,
-				out uint d2,
-				out uint d3,
-				out uint d4,
-				out uint d5,
-				out uint d6,
-				out uint d7)
-		{
-			d0 = this.d0;
-			d1 = this.d1;
-			d2 = this.d2;
-			d3 = this.d3;
-			d4 = this.d4;
-			d5 = this.d5;
-			d6 = this.d6;
-			d7 = this.d7;
-		}
-
 
 		public readonly bool IsZero
 		{
@@ -1053,6 +1031,27 @@ namespace NBitcoin.Secp256k1
 		{
 			return a.Add(b);
 		}
+
+		public readonly void Deconstruct(
+				out uint d0,
+				out uint d1,
+				out uint d2,
+				out uint d3,
+				out uint d4,
+				out uint d5,
+				out uint d6,
+				out uint d7)
+		{
+			d0 = this.d0;
+			d1 = this.d1;
+			d2 = this.d2;
+			d3 = this.d3;
+			d4 = this.d4;
+			d5 = this.d5;
+			d6 = this.d6;
+			d7 = this.d7;
+		}
+
 
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly override int GetHashCode()
