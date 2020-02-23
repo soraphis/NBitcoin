@@ -13,7 +13,6 @@ namespace NBitcoin.Secp256k1
 		internal readonly bool normalized;
 
 		static readonly FieldElement _Zero = new FieldElement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-		internal static readonly uint CURVE_B = 4;
 
 		public static ref readonly FieldElement Zero => ref _Zero;
 
@@ -146,7 +145,7 @@ namespace NBitcoin.Secp256k1
 		{
 			ref readonly FieldElement a = ref this;
 			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
-			/** Given that p is congruent to 3 mod 4, we can compute the square root of
+			/* Given that p is congruent to 3 mod 4, we can compute the square root of
 			 *  a mod p as the (p+1)/4'th power of a.
 			 *
 			 *  As (p+1)/4 is an even number, it will have the same result for a and for
@@ -158,7 +157,7 @@ namespace NBitcoin.Secp256k1
 			FieldElement x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1;
 			int j;
 
-			/** The binary representation of (p + 1)/4 has 3 blocks of 1s, with lengths in
+			/* The binary representation of (p + 1)/4 has 3 blocks of 1s, with lengths in
 			 *  { 2, 22, 223 }. Use an addition chain to calculate 2^n - 1 for each block:
 			 *  1, [2], 3, 6, 9, 11, [22], 44, 88, 176, 220, [223]
 			 */
@@ -327,7 +326,7 @@ namespace NBitcoin.Secp256k1
 			FieldElement x2, x3, x6, x9, x11, x22, x44, x88, x176, x220, x223, t1;
 			int j;
 			ref readonly FieldElement a = ref this;
-			/** The binary representation of (p - 2) has 5 blocks of 1s, with lengths in
+			/* The binary representation of (p - 2) has 5 blocks of 1s, with lengths in
 			 *  { 1, 2, 22, 223 }. Use an addition chain to calculate 2^n - 1 for each block:
 			 *  [1], [2], 3, 6, 9, 11, [22], 44, 88, 176, 220, [223]
 			 */
@@ -492,7 +491,7 @@ namespace NBitcoin.Secp256k1
 			VERIFY_BITS(a.n8, 30);
 			VERIFY_BITS(a.n9, 26);
 
-			/** [... a b c] is a shorthand for ... + a<<52 + b<<26 + c<<0 mod n.
+			/* [... a b c] is a shorthand for ... + a<<52 + b<<26 + c<<0 mod n.
 			 *  px is a shorthand for sum(a.ni*a[x-i], i=0..x).
 			 *  Note that [x 0 0 0 0 0 0 0 0 0 0] = [x*R1 x*R0].
 			 */
@@ -844,7 +843,7 @@ namespace NBitcoin.Secp256k1
 			VERIFY_BITS(b.n8, 30);
 			VERIFY_BITS(b.n9, 26);
 
-			/** [... a b c] is a shorthand for ... + a<<52 + b<<26 + c<<0 mod n.
+			/* [... a b c] is a shorthand for ... + a<<52 + b<<26 + c<<0 mod n.
 			 *  px is a shorthand for sum(a.ni*b[x-i], i=0..x).
 			 *  Note that [x 0 0 0 0 0 0 0 0 0 0] = [x*R1 x*R0].
 			 */
@@ -1328,6 +1327,11 @@ namespace NBitcoin.Secp256k1
 			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
 			result.VERIFY();
 			return result;
+		}
+
+		public static void NormalizeVariable(ref FieldElement fe)
+		{
+			fe = fe.NormalizeVariable();
 		}
 
 		public readonly FieldElement NormalizeVariable()

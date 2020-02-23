@@ -6,8 +6,8 @@ namespace NBitcoin.Secp256k1
 {
 	readonly struct GroupElementStorage
 	{
-		readonly FieldElementStorage x;
-		readonly FieldElementStorage y;
+		internal readonly FieldElementStorage x;
+		internal readonly FieldElementStorage y;
 		public GroupElementStorage(in FieldElement x, in FieldElement y)
 		{
 			this.x = x.Normalize().ToStorage();

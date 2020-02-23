@@ -8,11 +8,31 @@ namespace NBitcoin.Secp256k1
 {
 	readonly struct GroupElement
 	{
+		/** Prefix byte used to tag various encoded curvepoints for specific purposes */
+		public const byte SECP256K1_TAG_PUBKEY_EVEN = 0x02;
+		public const byte SECP256K1_TAG_PUBKEY_ODD = 0x03;
+		public const byte SECP256K1_TAG_PUBKEY_UNCOMPRESSED = 0x04;
+		public const byte SECP256K1_TAG_PUBKEY_HYBRID_EVEN = 0x06;
+		public const byte SECP256K1_TAG_PUBKEY_HYBRID_ODD = 0x07;
+
 		internal readonly FieldElement x;
 		internal readonly FieldElement y;
 		internal readonly bool infinity; /* whether this represents the point at infinity */
 		static readonly GroupElement _Infinity = new GroupElement(FieldElement.Zero, FieldElement.Zero, true);
+		/** Generator for secp256k1, value 'g' defined in
+ *  "Standards for Efficient Cryptography" (SEC2) 2.7.1.
+ */
 		public static ref readonly GroupElement Infinity => ref _Infinity;
+
+		public static GroupElement SECP256K1_GE_CONST(uint a, uint b, uint c, uint d, uint e, uint f, uint g, uint h, uint i, uint j, uint k, uint l, uint m, uint n, uint o, uint p)
+		{
+			return new GroupElement(
+				FieldElement.SECP256K1_FE_CONST(a, b, c, d, e, f, g, h),
+				FieldElement.SECP256K1_FE_CONST(i, j, k, l, m, n, o, p),
+				false
+				);
+		}
+
 		public readonly bool IsInfinity
 		{
 			[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -38,7 +58,7 @@ namespace NBitcoin.Secp256k1
 				y2 = y.Sqr();
 				x3 = x.Sqr();
 				x3 = x3 * x;
-				c = new FieldElement(FieldElement.CURVE_B);
+				c = new FieldElement(CURVE_B);
 				x3 += c;
 				x3 = x3.NormalizeWeak();
 				return y2.EqualsVariable(x3);
@@ -107,6 +127,32 @@ namespace NBitcoin.Secp256k1
 				throw new InvalidOperationException("VERIFY_CHECK failed (bug in C# secp256k1)");
 		}
 
+		public readonly bool SerializePubKey(Span<byte> output, bool compressed, out int size)
+		{
+			if (IsInfinity)
+			{
+				size = 0;
+				return false;
+			}
+			var elemx = x.NormalizeVariable();
+			var elemy = y.NormalizeVariable();
+
+			elemx.WriteToSpan(output.Slice(1));
+			if (compressed)
+			{
+				size = 33;
+				output[0] = elemy.IsOdd ? SECP256K1_TAG_PUBKEY_ODD : SECP256K1_TAG_PUBKEY_EVEN;
+			}
+			else
+			{
+				size = 65;
+				output[0] = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
+				elemy.WriteToSpan(output.Slice(33));
+			}
+			return true;
+		}
+
+		internal const uint CURVE_B = 7;
 		public static bool TryCreateXQuad(FieldElement x, out GroupElement result)
 		{
 			result = GroupElement.Zero;
@@ -117,7 +163,7 @@ namespace NBitcoin.Secp256k1
 			x2 = x.Sqr();
 			x3 = x * x2;
 			rinfinity = false;
-			c = new FieldElement(FieldElement.CURVE_B);
+			c = new FieldElement(CURVE_B);
 			c += x3;
 			if (!c.Sqrt(out ry))
 				return false;

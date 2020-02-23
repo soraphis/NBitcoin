@@ -7,6 +7,7 @@ using NBitcoin.Secp256k1;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
+using System.Security.Cryptography;
 
 namespace NBitcoin.Tests
 {
@@ -55,6 +56,105 @@ namespace NBitcoin.Tests
 
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
+		public void CanBuildECMultiplicationContext()
+		{
+			var ctx = ECMultiplicationContext.Instance;
+			FieldElement gx = new FieldElement(0x004AA6EBU, 0x011FF73CU, 0x01F4B4CCU, 0x03CCAE8DU, 0x01C4CCB1U, 0x03DCCA61U, 0x02E73D88U, 0x000CE09AU, 0x003D056AU, 0x00061AD2U, 1, true);
+			FieldElement gy = new FieldElement(0x0280888BU, 0x01E5FE1BU, 0x038B4A4AU, 0x02422544U, 0x0321FB80U, 0x0010602AU, 0x017446E2U, 0x03DDF8B8U, 0x0132C67CU, 0x000EE54BU, 1, true);
+			GroupElement expected = new GroupElement(gx, gy, false);
+
+			ge_equals_ge(expected, ctx.pre_g[32].ToGroupElement());
+
+			FieldElement g3x = new FieldElement(0x00890DB9U, 0x01B09D48U, 0x01E76193U, 0x00177D9AU, 0x03E840E0U, 0x01C43464U, 0x019B01A1U, 0x03442D1BU, 0x01617A56U, 0x00274F09U, 1, true);
+			FieldElement g3y = new FieldElement(0x00521EA3U, 0x019F38DEU, 0x02ACA044U, 0x0337A2BCU, 0x001F89FFU, 0x00B6A6E5U, 0x01FEE9B8U, 0x03A6F30BU, 0x00BC4C4AU, 0x001AEF70U, 1, true);
+			expected = new GroupElement(g3x, g3y, false);
+
+			ge_equals_ge(expected, ctx.pre_g_128[32].ToGroupElement());
+
+			// Cross check with the same code running on the C version
+			uint v = 0;
+			for (int i = 0; i < ctx.pre_g.Length; i++)
+			{
+				var a = ctx.pre_g[i];
+				var b = ctx.pre_g_128[i];
+				v += a.x.n0 + a.x.n1 + a.x.n2 + a.x.n3 + a.x.n4 + a.x.n5 + a.x.n6 + a.x.n7;
+				v += b.x.n0 + b.x.n1 + b.x.n2 + b.x.n3 + b.x.n4 + b.x.n5 + b.x.n6 + b.x.n7;
+				v += a.y.n0 + a.y.n1 + a.y.n2 + a.y.n3 + a.y.n4 + a.y.n5 + a.y.n6 + a.y.n7;
+				v += b.y.n0 + b.y.n1 + b.y.n2 + b.y.n3 + b.y.n4 + b.y.n5 + b.y.n6 + b.y.n7;
+			}
+			Assert.Equal(0xc68acec4, v);
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_ecmult_chain()
+		{
+			/* random starting point A (on the curve) */
+			GroupElementJacobian a = GroupElementJacobian.SECP256K1_GEJ_CONST(
+				0x8b30bbe9, 0xae2a9906, 0x96b22f67, 0x0709dff3,
+				0x727fd8bc, 0x04d3362c, 0x6c7bf458, 0xe2846004,
+				0xa357ae91, 0x5c4a6528, 0x1309edf2, 0x0504740f,
+				0x0eb33439, 0x90216b4f, 0x81063cb6, 0x5f2f7e0f
+			);
+			/* two random initial factors xn and gn */
+			Scalar xn = Scalar.SECP256K1_SCALAR_CONST(
+				0x84cc5452, 0xf7fde1ed, 0xb4d38a8c, 0xe9b1b84c,
+				0xcef31f14, 0x6e569be9, 0x705d357a, 0x42985407
+			);
+			Scalar gn = Scalar.SECP256K1_SCALAR_CONST(
+				0xa1e58d22, 0x553dcd42, 0xb2398062, 0x5d4c57a9,
+				0x6e9323d4, 0x2b3152e5, 0xca2c3990, 0xedc7c9de
+			);
+			/* two small multipliers to be applied to xn and gn in every iteration: */
+			Scalar xf = Scalar.SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0x1337);
+			Scalar gf = Scalar.SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0x7113);
+			/* accumulators with the resulting coefficients to A and G */
+			Scalar ae = Scalar.SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+			Scalar ge = Scalar.SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+			/* actual points */
+			GroupElementJacobian x;
+			GroupElementJacobian x2;
+			int i;
+
+			/* the point being computed */
+			x = a;
+			for (i = 0; i < 200 * count; i++)
+			{
+				/* in each iteration, compute X = xn*X + gn*G; */
+				x = ecmult_ctx.ECMultiply(x, xn, gn);
+				/* also compute ae and ge: the actual accumulated factors for A and G */
+				/* if X was (ae*A+ge*G), xn*X + gn*G results in (xn*ae*A + (xn*ge+gn)*G) */
+				ae = ae * xn;
+				ge = ge * xn;
+				ge += gn;
+				/* modify xn and gn */
+				xn = xn * xf;
+				gn = gn * gf;
+
+				/* verify */
+				if (i == 19999)
+				{
+					/* expected result after 19999 iterations */
+					GroupElementJacobian rp = GroupElementJacobian.SECP256K1_GEJ_CONST(
+						0xD6E96687, 0xF9B10D09, 0x2A6F3543, 0x9D86CEBE,
+						0xA4535D0D, 0x409F5358, 0x6440BD74, 0xB933E830,
+						0xB95CBCA2, 0xC77DA786, 0x539BE8FD, 0x53354D2D,
+						0x3B4F566A, 0xE6580454, 0x07ED6015, 0xEE1B2A88
+					);
+					rp = rp.Negate();
+					rp = rp.AddVariable(x, out _);
+					Assert.True(rp.IsInfinity);
+				}
+			}
+			/* redo the computation, but directly with the resulting ae and ge coefficients: */
+			x2 = ecmult_ctx.ECMultiply(a, ae, ge);
+			x2 = x2.Negate();
+			x2 = x2.AddVariable(x, out _);
+			Assert.True(x2.IsInfinity);
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
 		public void run_point_times_order()
 		{
 			int i;
@@ -78,10 +178,52 @@ namespace NBitcoin.Tests
 			x = x.NormalizeVariable();
 			Assert.True(x.EqualsVariable(xr));
 		}
-
-		private void test_point_times_order(GroupElementJacobian j)
+		ECMultiplicationContext ecmult_ctx = ECMultiplicationContext.Instance;
+		private void test_point_times_order(GroupElementJacobian point)
 		{
-			
+			/* X * (point + G) + (order-X) * (pointer + G) = 0 */
+			Scalar x;
+			Scalar nx;
+			Scalar zero = Scalar.Zero;
+			Scalar one = Scalar.One;
+			GroupElementJacobian res1, res2;
+			GroupElement res3;
+			byte[] pub = new byte[65];
+			int psize = 65;
+			x = random_scalar_order_test();
+			nx = x.Negate();
+			res1 = ecmult_ctx.ECMultiply(point, x, x); /* calc res1 = x * point + x * G; */
+			res2 = ecmult_ctx.ECMultiply(point, nx, nx); /* calc res2 = (order - x) * point + (order - x) * G; */
+			res1 = res1.AddVariable(res2, out _);
+			Assert.True(res1.IsInfinity);
+			Assert.True(!res1.IsValidVariable);
+			res3 = res1.ToGroupElement();
+			Assert.True(res3.IsInfinity);
+			Assert.True(!res3.IsValidVariable);
+			Assert.True(!res3.SerializePubKey(pub, false, out psize));
+			psize = 65;
+			Assert.True(!res3.SerializePubKey(pub, false, out psize));
+			/* check zero/one edge cases */
+			res1 = ecmult_ctx.ECMultiply(point, zero, zero);
+			res3 = res1.ToGroupElement();
+			Assert.True(res3.IsInfinity);
+			res1 = ecmult_ctx.ECMultiply(point, one, zero);
+			res3 = res1.ToGroupElement();
+			ge_equals_gej(res3, point);
+			res1 = ecmult_ctx.ECMultiply(point, zero, one);
+			res3 = res1.ToGroupElement();
+			ge_equals_ge(res3, EC.G);
+		}
+
+		private void ge_equals_ge(GroupElement a, GroupElement b)
+		{
+			Assert.True(a.infinity == b.infinity);
+			if (a.infinity)
+			{
+				return;
+			}
+			Assert.True(a.x == b.x);
+			Assert.True(a.y == b.y);
 		}
 
 		private void test_group_decompress(FieldElement x)

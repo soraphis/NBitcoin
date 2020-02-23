@@ -129,7 +129,7 @@ namespace NBitcoin.Secp256k1
 				{
 					return false;
 				}
-				/** y^2 = x^3 + 7
+				/* y^2 = x^3 + 7
 				 *  (Y/Z^3)^2 = (X/Z^2)^3 + 7
 				 *  Y^2 / Z^6 = X^3 / Z^6 + 7
 				 *  Y^2 = X^3 + 7*Z^6
@@ -140,7 +140,7 @@ namespace NBitcoin.Secp256k1
 				z2 = z.Sqr();
 				z6 = z2.Sqr();
 				z6 = z6 * z2;
-				z6 *= FieldElement.CURVE_B;
+				z6 *= GroupElement.CURVE_B;
 				x3 += z6;
 				x3 = x3.NormalizeWeak();
 				return y2.EqualsVariable(x3);
@@ -251,7 +251,7 @@ namespace NBitcoin.Secp256k1
 			}
 			rinfinity = false;
 
-			/** We need to calculate (rx,ry,rz) = (ax,ay,az) + (bx,by,1/bzinv). Due to
+			/* We need to calculate (rx,ry,rz) = (ax,ay,az) + (bx,by,1/bzinv). Due to
 			 *  secp256k1's isomorphism we can multiply the Z coordinates on both sides
 			 *  by bzinv, and get: (rx,ry,rz*bzinv) = (ax,ay,az*bzinv) + (bx,by,1).
 			 *  This means that (rx,ry,rz) can be calculated as
@@ -308,7 +308,7 @@ namespace NBitcoin.Secp256k1
 		{
 			ref readonly GroupElementJacobian a = ref this;
 
-			/** For secp256k1, 2Q is infinity if and only if Q is infinity. This is because if 2Q = infinity,
+			/* For secp256k1, 2Q is infinity if and only if Q is infinity. This is because if 2Q = infinity,
    *  Q must equal -Q, or that Q.y == -(Q.y), or Q.y is 0. For a point on y^2 = x^3 + 7 to have
    *  y=0, x^3 must be -7 mod p. However, -7 has no cube root mod p.
    *
@@ -440,7 +440,7 @@ namespace NBitcoin.Secp256k1
 			int infinity, degenerate;
 			VERIFY_CHECK(!b.infinity);
 
-			/** In:
+			/* In:
 			 *    Eric Brier and Marc Joye, Weierstrass Elliptic Curves and Side-Channel Attacks.
 			 *    In D. Naccache and P. Paillier, Eds., Public Key Cryptography, vol. 2274 of Lecture Notes in Computer Science, pages 335-345. Springer-Verlag, 2002.
 			 *  we find as solution for a unified addition/doubling formula:
@@ -504,7 +504,7 @@ namespace NBitcoin.Secp256k1
 			m_alt = u2.Negate(1);                /* Malt = -X2*Z1^2 */
 			tt = u1 * m_alt;                 /* tt = -U1*U2 (2) */
 			rr += tt;                         /* rr = R = T^2-U1*U2 (3) */
-			/** If lambda = R/M = 0/0 we have a problem (except in the "trivial"
+			/* If lambda = R/M = 0/0 we have a problem (except in the "trivial"
 			 *  case that Z = z1z2 = 0, and this is special-cased later on). */
 			degenerate = (m.NormalizesToZero() ? 1 : 0) & (rr.NormalizesToZero() ? 1 : 0);
 			/* This only occurs when y1 == -y2 and x1^3 == x2^3, but x1 != x2.
@@ -547,7 +547,7 @@ namespace NBitcoin.Secp256k1
 			rx *= 4U;                     /* rx = X3 = 4*(Ralt^2-Q) */
 			ry *= 4U;                     /* ry = Y3 = 4*Ralt*(Q - 2x3) - 4*M^3*Malt (4) */
 
-			/** In case a.infinity == 1, replace r with (b.x, b.y, 1). */
+			/* In case a.infinity == 1, replace r with (b.x, b.y, 1). */
 			FieldElement.CMov(ref rx, b.x, a.infinity ? 1 : 0);
 			FieldElement.CMov(ref ry, b.y, a.infinity ? 1 : 0);
 			FieldElement.CMov(ref rz, fe_1, a.infinity ? 1 : 0);

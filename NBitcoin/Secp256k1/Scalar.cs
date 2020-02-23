@@ -645,15 +645,123 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
+
+		public readonly void Split128(out Scalar r1, out Scalar r2)
+		{
+			r1 = new Scalar(d0, d1, d2, d3, 0, 0, 0, 0);
+			r2 = new Scalar(d4, d5, d6, d7, 0, 0, 0, 0);
+		}
+
+		/**
+ * The Secp256k1 curve has an endomorphism, where lambda * (x, y) = (beta * x, y), where
+ * lambda is {0x53,0x63,0xad,0x4c,0xc0,0x5c,0x30,0xe0,0xa5,0x26,0x1c,0x02,0x88,0x12,0x64,0x5a,
+ *            0x12,0x2e,0x22,0xea,0x20,0x81,0x66,0x78,0xdf,0x02,0x96,0x7c,0x1b,0x23,0xbd,0x72}
+ *
+ * "Guide to Elliptic Curve Cryptography" (Hankerson, Menezes, Vanstone) gives an algorithm
+ * (algorithm 3.74) to find k1 and k2 given k, such that k1 + k2 * lambda == k mod n, and k1
+ * and k2 have a small size.
+ * It relies on constants a1, b1, a2, b2. These constants for the value of lambda above are:
+ *
+ * - a1 =      {0x30,0x86,0xd2,0x21,0xa7,0xd4,0x6b,0xcd,0xe8,0x6c,0x90,0xe4,0x92,0x84,0xeb,0x15}
+ * - b1 =     -{0xe4,0x43,0x7e,0xd6,0x01,0x0e,0x88,0x28,0x6f,0x54,0x7f,0xa9,0x0a,0xbf,0xe4,0xc3}
+ * - a2 = {0x01,0x14,0xca,0x50,0xf7,0xa8,0xe2,0xf3,0xf6,0x57,0xc1,0x10,0x8d,0x9d,0x44,0xcf,0xd8}
+ * - b2 =      {0x30,0x86,0xd2,0x21,0xa7,0xd4,0x6b,0xcd,0xe8,0x6c,0x90,0xe4,0x92,0x84,0xeb,0x15}
+ *
+ * The algorithm then computes c1 = round(b1 * k / n) and c2 = round(b2 * k / n), and gives
+ * k1 = k - (c1*a1 + c2*a2) and k2 = -(c1*b1 + c2*b2). Instead, we use modular arithmetic, and
+ * compute k1 as k - k2 * lambda, avoiding the need for constants a1 and a2.
+ *
+ * g1, g2 are precomputed constants used to replace division with a rounded multiplication
+ * when decomposing the scalar for an endomorphism-based point multiplication.
+ *
+ * The possibility of using precomputed estimates is mentioned in "Guide to Elliptic Curve
+ * Cryptography" (Hankerson, Menezes, Vanstone) in section 3.5.
+ *
+ * The derivation is described in the paper "Efficient Software Implementation of Public-Key
+ * Cryptography on Sensor Networks Using the MSP430X Microcontroller" (Gouvea, Oliveira, Lopez),
+ * Section 4.3 (here we use a somewhat higher-precision estimate):
+ * d = a1*b2 - b1*a2
+ * g1 = round((2^272)*b2/d)
+ * g2 = round((2^272)*b1/d)
+ *
+ * (Note that 'd' is also equal to the curve order here because [a1,b1] and [a2,b2] are found
+ * as outputs of the Extended Euclidean Algorithm on inputs 'order' and 'lambda').
+ *
+ * The function below splits a in r1 and r2, such that r1 + lambda * r2 == a (mod order).
+ */
+
+		public static Scalar SECP256K1_SCALAR_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
+		{
+			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
+		}
+		static readonly Scalar minus_lambda = SECP256K1_SCALAR_CONST(
+			0xAC9C52B3U, 0x3FA3CF1FU, 0x5AD9E3FDU, 0x77ED9BA4U,
+			0xA880B9FCU, 0x8EC739C2U, 0xE0CFC810U, 0xB51283CFU
+		);
+		static readonly Scalar minus_b1 = SECP256K1_SCALAR_CONST(
+			0x00000000U, 0x00000000U, 0x00000000U, 0x00000000U,
+			0xE4437ED6U, 0x010E8828U, 0x6F547FA9U, 0x0ABFE4C3U
+		);
+		static readonly Scalar minus_b2 = SECP256K1_SCALAR_CONST(
+			0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFFU, 0xFFFFFFFEU,
+			0x8A280AC5U, 0x0774346DU, 0xD765CDA8U, 0x3DB1562CU
+		);
+		static readonly Scalar g1 = SECP256K1_SCALAR_CONST(
+			0x00000000U, 0x00000000U, 0x00000000U, 0x00003086U,
+			0xD221A7D4U, 0x6BCDE86CU, 0x90E49284U, 0xEB153DABU
+		);
+		static readonly Scalar g2 = SECP256K1_SCALAR_CONST(
+			0x00000000U, 0x00000000U, 0x00000000U, 0x0000E443U,
+			0x7ED6010EU, 0x88286F54U, 0x7FA90ABFU, 0xE4C42212U
+		);
+		public readonly void SplitLambda(out Scalar r1, out Scalar r2)
+		{
+			/* these _var calls are constant time since the shift amount is constant */
+			Scalar c1 = this.MultiplyShiftVariable(g1, 272);
+			Scalar c2 = this.MultiplyShiftVariable(g2, 272);
+			c1 = c1 * minus_b1;
+			c2 = c2 * minus_b2;
+			r2 = c1 + c2;
+			r1 = r2 * minus_lambda;
+			r1 = r1 + this;
+		}
+
+		[MethodImpl(MethodImplOptions.NoOptimization)]
+		public readonly Scalar MultiplyShiftVariable(Scalar b, int shift)
+		{
+			uint rd0, rd1, rd2, rd3, rd4, rd5, rd6, rd7;
+			Span<uint> l = stackalloc uint[16];
+			int shiftlimbs;
+			int shiftlow;
+			int shifthigh;
+			VERIFY_CHECK(shift >= 256);
+			Scalar.mul_512(l, this, b);
+			shiftlimbs = shift >> 5;
+			shiftlow = shift & 0x1F;
+			shifthigh = 32 - shiftlow;
+			rd0 = shift < 512 ? (l[0 + shiftlimbs] >> shiftlow | (shift < 480 && shiftlow != 0 ? (l[1 + shiftlimbs] << shifthigh) : 0)) : 0;
+			rd1 = shift < 480 ? (l[1 + shiftlimbs] >> shiftlow | (shift < 448 && shiftlow != 0 ? (l[2 + shiftlimbs] << shifthigh) : 0)) : 0;
+			rd2 = shift < 448 ? (l[2 + shiftlimbs] >> shiftlow | (shift < 416 && shiftlow != 0 ? (l[3 + shiftlimbs] << shifthigh) : 0)) : 0;
+			rd3 = shift < 416 ? (l[3 + shiftlimbs] >> shiftlow | (shift < 384 && shiftlow != 0 ? (l[4 + shiftlimbs] << shifthigh) : 0)) : 0;
+			rd4 = shift < 384 ? (l[4 + shiftlimbs] >> shiftlow | (shift < 352 && shiftlow != 0 ? (l[5 + shiftlimbs] << shifthigh) : 0)) : 0;
+			rd5 = shift < 352 ? (l[5 + shiftlimbs] >> shiftlow | (shift < 320 && shiftlow != 0 ? (l[6 + shiftlimbs] << shifthigh) : 0)) : 0;
+			rd6 = shift < 320 ? (l[6 + shiftlimbs] >> shiftlow | (shift < 288 && shiftlow != 0 ? (l[7 + shiftlimbs] << shifthigh) : 0)) : 0;
+			rd7 = shift < 288 ? (l[7 + shiftlimbs] >> shiftlow) : 0;
+
+			var r = new Scalar(rd0, rd1, rd2, rd3, rd4, rd5, rd6, rd7);
+			r = r.CAddBit(0, (int)((l[(shift - 1) >> 5] >> ((shift - 1) & 0x1f)) & 1));
+			return r;
+		}
+
 		public readonly void Deconstruct(
-			out uint d0,
-			out uint d1,
-			out uint d2,
-			out uint d3,
-			out uint d4,
-			out uint d5,
-			out uint d6,
-			out uint d7)
+				out uint d0,
+				out uint d1,
+				out uint d2,
+				out uint d3,
+				out uint d4,
+				out uint d5,
+				out uint d6,
+				out uint d7)
 		{
 			d0 = this.d0;
 			d1 = this.d1;
@@ -962,6 +1070,11 @@ namespace NBitcoin.Secp256k1
 				hash = hash * 23 + d7.GetHashCode();
 				return hash;
 			}
+		}
+
+		public readonly string ToC(string varname)
+		{
+			return $"secp256k1_scalar {varname} = {{ 0x{d0.ToString("X8")}UL, 0x{d1.ToString("X8")}UL, 0x{d2.ToString("X8")}UL, 0x{d3.ToString("X8")}UL, 0x{d4.ToString("X8")}UL, 0x{d5.ToString("X8")}UL, 0x{d6.ToString("X8")}UL, 0x{d7.ToString("X8")}UL }}";
 		}
 	}
 }

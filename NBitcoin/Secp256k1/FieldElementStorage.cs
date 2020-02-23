@@ -8,7 +8,7 @@ namespace NBitcoin.Secp256k1
 {
 	readonly struct FieldElementStorage
 	{
-		readonly uint n0, n1, n2, n3, n4, n5, n6, n7;
+		internal readonly uint n0, n1, n2, n3, n4, n5, n6, n7;
 
 		public FieldElementStorage(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7)
 		{
