@@ -58,7 +58,7 @@ namespace NBitcoin.Secp256k1
 				y2 = y.Sqr();
 				x3 = x.Sqr();
 				x3 = x3 * x;
-				c = new FieldElement(CURVE_B);
+				c = new FieldElement(EC.CURVE_B);
 				x3 += c;
 				x3 = x3.NormalizeWeak();
 				return y2.EqualsVariable(x3);
@@ -152,7 +152,7 @@ namespace NBitcoin.Secp256k1
 			return true;
 		}
 
-		internal const uint CURVE_B = 7;
+		
 		public static bool TryCreateXQuad(FieldElement x, out GroupElement result)
 		{
 			result = GroupElement.Zero;
@@ -163,7 +163,7 @@ namespace NBitcoin.Secp256k1
 			x2 = x.Sqr();
 			x3 = x * x2;
 			rinfinity = false;
-			c = new FieldElement(CURVE_B);
+			c = new FieldElement(EC.CURVE_B);
 			c += x3;
 			if (!c.Sqrt(out ry))
 				return false;

@@ -149,19 +149,19 @@ namespace NBitcoin.Secp256k1
 		static readonly Scalar _NC = new Scalar(SECP256K1_N_C_0, SECP256K1_N_C_1, SECP256K1_N_C_2, SECP256K1_N_C_3, SECP256K1_N_C_4, 0, 0, 0);
 		public static ref readonly Scalar NC => ref _NC;
 
-		const uint SECP256K1_N_0 = 0xD0364141U;
-		const uint SECP256K1_N_1 = 0xBFD25E8CU;
-		const uint SECP256K1_N_2 = 0xAF48A03BU;
-		const uint SECP256K1_N_3 = 0xBAAEDCE6U;
-		const uint SECP256K1_N_4 = 0xFFFFFFFEU;
-		const uint SECP256K1_N_5 = 0xFFFFFFFFU;
-		const uint SECP256K1_N_6 = 0xFFFFFFFFU;
-		const uint SECP256K1_N_7 = 0xFFFFFFFFU;
-		const uint SECP256K1_N_C_0 = ~SECP256K1_N_0 + 1;
-		const uint SECP256K1_N_C_1 = ~SECP256K1_N_1;
-		const uint SECP256K1_N_C_2 = ~SECP256K1_N_2;
-		const uint SECP256K1_N_C_3 = ~SECP256K1_N_3;
-		const uint SECP256K1_N_C_4 = 1;
+		internal const uint SECP256K1_N_0 = 0xD0364141U;
+		internal const uint SECP256K1_N_1 = 0xBFD25E8CU;
+		internal const uint SECP256K1_N_2 = 0xAF48A03BU;
+		internal const uint SECP256K1_N_3 = 0xBAAEDCE6U;
+		internal const uint SECP256K1_N_4 = 0xFFFFFFFEU;
+		internal const uint SECP256K1_N_5 = 0xFFFFFFFFU;
+		internal const uint SECP256K1_N_6 = 0xFFFFFFFFU;
+		internal const uint SECP256K1_N_7 = 0xFFFFFFFFU;
+		internal const uint SECP256K1_N_C_0 = ~SECP256K1_N_0 + 1;
+		internal const uint SECP256K1_N_C_1 = ~SECP256K1_N_1;
+		internal const uint SECP256K1_N_C_2 = ~SECP256K1_N_2;
+		internal const uint SECP256K1_N_C_3 = ~SECP256K1_N_3;
+		internal const uint SECP256K1_N_C_4 = 1;
 		readonly uint d0, d1, d2, d3, d4, d5, d6, d7;
 		public Scalar(uint d0, uint d1, uint d2, uint d3, uint d4, uint d5, uint d6, uint d7)
 		{

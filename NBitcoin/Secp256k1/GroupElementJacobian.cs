@@ -140,7 +140,7 @@ namespace NBitcoin.Secp256k1
 				z2 = z.Sqr();
 				z6 = z2.Sqr();
 				z6 = z6 * z2;
-				z6 *= GroupElement.CURVE_B;
+				z6 *= EC.CURVE_B;
 				x3 += z6;
 				x3 = x3.NormalizeWeak();
 				return y2.EqualsVariable(x3);
