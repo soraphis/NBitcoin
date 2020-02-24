@@ -8,6 +8,7 @@ namespace NBitcoin.Secp256k1
 {
 	readonly struct GroupElement
 	{
+		public const int WNAF_BITS = 128;
 		/** Prefix byte used to tag various encoded curvepoints for specific purposes */
 		public const byte SECP256K1_TAG_PUBKEY_EVEN = 0x02;
 		public const byte SECP256K1_TAG_PUBKEY_ODD = 0x03;
@@ -517,8 +518,98 @@ namespace NBitcoin.Secp256k1
 			return skew;
 		}
 
+		/** Convert a number to WNAF notation.
+		 *  The number becomes represented by sum(2^{wi} * wnaf[i], i=0..WNAF_SIZE(w)+1) - return_val.
+		 *  It has the following guarantees:
+		 *  - each wnaf[i] is either 0 or an odd integer between -(1 << w) and (1 << w)
+		 *  - the number of words set is always WNAF_SIZE(w)
+		 *  - the returned skew is 0 or 1
+		 */
+		internal static int secp256k1_wnaf_fixed(Span<int> wnaf, in Scalar s, int w)
+		{
+
+			int skew = 0;
+			int pos;
+			int max_pos;
+			int last_w;
+			ref readonly Scalar work = ref s;
+
+			if (s.IsZero)
+			{
+				for (pos = 0; pos < WNAF_SIZE(w); pos++)
+				{
+					wnaf[pos] = 0;
+				}
+				return 0;
+			}
+
+			if (s.IsEven)
+			{
+				skew = 1;
+			}
+
+			wnaf[0] = (int)work.GetBitsVariable(0, w) + skew;
+			/* Compute last window size. Relevant when window size doesn't divide the
+			 * number of bits in the scalar */
+			last_w = WNAF_BITS - (WNAF_SIZE(w) - 1) * w;
+
+			/* Store the position of the first nonzero word in max_pos to allow
+			 * skipping leading zeros when calculating the wnaf. */
+			for (pos = WNAF_SIZE(w) - 1; pos > 0; pos--)
+			{
+				int val = (int)work.GetBitsVariable(pos * w, pos == WNAF_SIZE(w) - 1 ? last_w : w);
+				if (val != 0)
+				{
+					break;
+				}
+				wnaf[pos] = 0;
+			}
+			max_pos = pos;
+			pos = 1;
+
+			while (pos <= max_pos)
+			{
+				int val = (int)work.GetBitsVariable(pos * w, pos == WNAF_SIZE(w) - 1 ? last_w : w);
+				if ((val & 1) == 0)
+				{
+					wnaf[pos - 1] -= (1 << w);
+					wnaf[pos] = (val + 1);
+				}
+				else
+				{
+					wnaf[pos] = val;
+				}
+				/* Set a coefficient to zero if it is 1 or -1 and the proceeding digit
+				 * is strictly negative or strictly positive respectively. Only change
+				 * coefficients at previous positions because above code assumes that
+				 * wnaf[pos - 1] is odd.
+				 */
+				if (pos >= 2 && ((wnaf[pos - 1] == 1 && wnaf[pos - 2] < 0) || (wnaf[pos - 1] == -1 && wnaf[pos - 2] > 0)))
+				{
+					if (wnaf[pos - 1] == 1)
+					{
+						wnaf[pos - 2] += 1 << w;
+					}
+					else
+					{
+						wnaf[pos - 2] -= 1 << w;
+					}
+					wnaf[pos - 1] = 0;
+				}
+				++pos;
+			}
+
+			return skew;
+		}
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static int WNAF_SIZE_BITS(int bits, int w)
+		internal static int WNAF_SIZE(int w)
+		{
+			return WNAF_SIZE_BITS(GroupElement.WNAF_BITS, w);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		internal static int WNAF_SIZE_BITS(int bits, int w)
 		{
 			return ((bits) + (w) - 1) / (w);
 		}

@@ -1980,6 +1980,276 @@ namespace NBitcoin.Tests
 				Assert.Equal(r1, v0);
 			}
 		}
+
+		void test_wnaf(in Scalar number, int w)
+		{
+
+			Scalar x, two, t;
+			Span<int> wnaf = stackalloc int[256];
+			int zeroes = -1;
+			int i;
+			int bits;
+			x = new Scalar(0);
+			two = new Scalar(2);
+			bits = ECMultiplicationContext.secp256k1_ecmult_wnaf(wnaf, number, w);
+			Assert.True(bits <= 256);
+			for (i = bits - 1; i >= 0; i--)
+			{
+				int v = wnaf[i];
+				x *= two;
+				if (v != 0)
+				{
+					Assert.True(zeroes == -1 || zeroes >= w - 1); /* Assert.True that distance between non-zero elements is at least w-1 */
+					zeroes = 0;
+					Assert.True((v & 1) == 1); /* Assert.True non-zero elements are odd */
+					Assert.True(v <= (1 << (w - 1)) - 1); /* Assert.True range below */
+					Assert.True(v >= -(1 << (w - 1)) - 1); /* Assert.True range above */
+				}
+				else
+				{
+					Assert.True(zeroes != -1); /* Assert.True that no unnecessary zero padding exists */
+					zeroes++;
+				}
+				if (v >= 0)
+				{
+					t = new Scalar((uint)v);
+				}
+				else
+				{
+					t = new Scalar((uint)-v);
+					t = t.Negate();
+				}
+				x = x + t;
+			}
+			Assert.Equal(x, number); /* Assert.True that wnaf represents number */
+		}
+
+		void test_constant_wnaf_negate(in Scalar number)
+		{
+			Scalar neg1 = number;
+			Scalar neg2 = number;
+			int sign1 = 1;
+			int sign2 = 1;
+
+			if (neg1.GetBits(0, 1) == 0)
+			{
+				neg1 = neg1.Negate();
+				sign1 = -1;
+			}
+			sign2 = neg2.CondNegate(neg2.IsEven ? 1 : 0, out neg2);
+			Assert.True(sign1 == sign2);
+			Assert.Equal(neg1, neg2);
+		}
+
+		void test_constant_wnaf(in Scalar number, int w)
+		{
+			Scalar x, shift;
+			Span<int> wnaf = stackalloc int[256];
+			int i;
+			int skew;
+			int bits = 256;
+			Scalar num = number;
+
+			x = new Scalar(0);
+			shift = new Scalar(1U << w);
+			/* With USE_ENDOMORPHISM on we only consider 128-bit numbers */
+			for (i = 0; i < 16; ++i)
+			{
+				num.ShrInt(8, out num);
+			}
+			bits = 128;
+			skew = GroupElement.secp256k1_wnaf_const(wnaf, num, w, bits);
+
+			for (i = GroupElement.WNAF_SIZE_BITS(bits, w); i >= 0; --i)
+			{
+				Scalar t;
+				int v = wnaf[i];
+				Assert.True(v != 0); /* Assert.True nonzero */
+				Assert.True((v & 1) != 0);  /* Assert.True parity */
+				Assert.True(v > -(1 << w)); /* Assert.True range above */
+				Assert.True(v < (1 << w));  /* Assert.True range below */
+
+				x *= shift;
+				if (v >= 0)
+				{
+					t = new Scalar((uint)v);
+				}
+				else
+				{
+					t = new Scalar((uint)-v);
+					t = t.Negate();
+				}
+				x = x + t;
+			}
+			/* Skew num because when encoding numbers as odd we use an offset */
+			num = num.CAddBit(skew == 2 ? 1U : 0, 1);
+			Assert.Equal(x, num);
+		}
+
+		void test_fixed_wnaf(in Scalar number, int w)
+		{
+			Scalar x, shift;
+			Span<int> wnaf = stackalloc int[256];
+			int i;
+			int skew;
+			Scalar num = number;
+
+			x = new Scalar(0);
+			shift = new Scalar(1U << w);
+			/* With USE_ENDOMORPHISM on we only consider 128-bit numbers */
+			for (i = 0; i < 16; ++i)
+			{
+				num.ShrInt(8, out num);
+			}
+			skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+
+			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 0; --i)
+			{
+				Scalar t;
+				int v = wnaf[i];
+				Assert.True(v == 0 || (v & 1) != 0);  /* Assert.True parity */
+				Assert.True(v > -(1 << w)); /* Assert.True range above */
+				Assert.True(v < (1 << w));  /* Assert.True range below */
+
+				x = x * shift;
+				if (v >= 0)
+				{
+					t = new Scalar((uint)v);
+				}
+				else
+				{
+					t = new Scalar((uint)-v);
+					t = t.Negate();
+				}
+				x = x + t;
+			}
+			/* If skew is 1 then add 1 to num */
+			num= num.CAddBit(0, skew == 1 ? 1 : 0);
+			Assert.Equal(x, num);
+		}
+
+		/* Assert.Trues that the first 8 elements of wnaf are equal to wnaf_expected and the
+		 * rest is 0.*/
+		void test_fixed_wnaf_small_helper(Span<int> wnaf, Span<int> wnaf_expected, int w)
+		{
+			int i;
+			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 8; --i)
+			{
+				Assert.True(wnaf[i] == 0);
+			}
+			for (i = 7; i >= 0; --i)
+			{
+				Assert.True(wnaf[i] == wnaf_expected[i]);
+			}
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void test_fixed_wnaf_small()
+		{
+			int w = 4;
+			Span<int> wnaf = stackalloc int[256];
+			int i;
+			int skew;
+			Scalar num;
+
+			num = new Scalar(0);
+			skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 0; --i)
+			{
+				int v = wnaf[i];
+				Assert.True(v == 0);
+			}
+			Assert.True(skew == 0);
+
+			num = new Scalar(1);
+			skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 1; --i)
+			{
+				int v = wnaf[i];
+				Assert.True(v == 0);
+			}
+			Assert.True(wnaf[0] == 1);
+			Assert.True(skew == 0);
+
+			{
+				int[] wnaf_expected = new int[]{ 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf };
+				num = new Scalar(0xffffffff);
+				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
+				Assert.True(skew == 0);
+			}
+			{
+				int[] wnaf_expected = new int[] { -1, -1, -1, -1, -1, -1, -1, 0xf };
+				num = new Scalar(0xeeeeeeee);
+				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
+				Assert.True(skew == 1);
+			}
+			{
+				int[] wnaf_expected = new int[] { 1, 0, 1, 0, 1, 0, 1, 0 };
+				num = new Scalar(0x01010101);
+				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
+				Assert.True(skew == 0);
+			}
+			{
+				int[] wnaf_expected = new int[] { -0xf, 0, 0xf, -0xf, 0, 0xf, 1, 0 };
+				num = new Scalar(0x01ef1ef1);
+				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
+				Assert.True(skew == 0);
+			}
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_wnaf()
+		{
+			int i;
+			Scalar n;
+
+			/* Sanity Assert.True: 1 and 2 are the smallest odd and even numbers and should
+			 *               have easier-to-diagnose failure modes  */
+			n = new Scalar(1);
+			test_constant_wnaf(n, 4);
+			n = new Scalar(2);
+			test_constant_wnaf(n, 4);
+			/* Test 0 */
+			test_fixed_wnaf_small();
+			/* Random tests */
+			for (i = 0; i < count; i++)
+			{
+				n = random_scalar_order();
+				test_wnaf(n, 4 + (i % 10));
+				test_constant_wnaf_negate(n);
+				test_constant_wnaf(n, 4 + (i % 10));
+				test_fixed_wnaf(n, 4 + (i % 10));
+			}
+			n = new Scalar(0);
+			Assert.True(n.CondNegate(1, out n) == -1);
+			Assert.True(n.IsZero);
+			Assert.True(n.CondNegate(0, out n) == 1);
+			Assert.True(n.IsZero);
+		}
+
+		private Scalar random_scalar_order()
+		{
+			Scalar num;
+			Span<byte> b32 = stackalloc byte[32];
+			do
+			{
+				b32.Clear();
+				secp256k1_rand256(b32);
+				num = new Scalar(b32, out var overflow);
+				if (overflow != 0 || num.IsZero)
+				{
+					continue;
+				}
+				return num;
+			} while (true);
+		}
+
 		Scalar random_scalar_order_test()
 		{
 			Scalar scalar = Scalar.Zero;
