@@ -2058,9 +2058,9 @@ namespace NBitcoin.Tests
 				num.ShrInt(8, out num);
 			}
 			bits = 128;
-			skew = GroupElement.secp256k1_wnaf_const(wnaf, num, w, bits);
+			skew = Wnaf.Const(wnaf, num, w, bits);
 
-			for (i = GroupElement.WNAF_SIZE_BITS(bits, w); i >= 0; --i)
+			for (i = Wnaf.SIZE_BITS(bits, w); i >= 0; --i)
 			{
 				Scalar t;
 				int v = wnaf[i];
@@ -2101,9 +2101,9 @@ namespace NBitcoin.Tests
 			{
 				num.ShrInt(8, out num);
 			}
-			skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+			skew = Wnaf.Fixed(wnaf, num, w);
 
-			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 0; --i)
+			for (i = Wnaf.SIZE(w) - 1; i >= 0; --i)
 			{
 				Scalar t;
 				int v = wnaf[i];
@@ -2133,7 +2133,7 @@ namespace NBitcoin.Tests
 		void test_fixed_wnaf_small_helper(Span<int> wnaf, Span<int> wnaf_expected, int w)
 		{
 			int i;
-			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 8; --i)
+			for (i = Wnaf.SIZE(w) - 1; i >= 8; --i)
 			{
 				Assert.True(wnaf[i] == 0);
 			}
@@ -2154,8 +2154,8 @@ namespace NBitcoin.Tests
 			Scalar num;
 
 			num = new Scalar(0);
-			skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
-			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 0; --i)
+			skew = Wnaf.Fixed(wnaf, num, w);
+			for (i = Wnaf.SIZE(w) - 1; i >= 0; --i)
 			{
 				int v = wnaf[i];
 				Assert.True(v == 0);
@@ -2163,8 +2163,8 @@ namespace NBitcoin.Tests
 			Assert.True(skew == 0);
 
 			num = new Scalar(1);
-			skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
-			for (i = GroupElement.WNAF_SIZE(w) - 1; i >= 1; --i)
+			skew = Wnaf.Fixed(wnaf, num, w);
+			for (i = Wnaf.SIZE(w) - 1; i >= 1; --i)
 			{
 				int v = wnaf[i];
 				Assert.True(v == 0);
@@ -2175,28 +2175,28 @@ namespace NBitcoin.Tests
 			{
 				int[] wnaf_expected = new int[]{ 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf };
 				num = new Scalar(0xffffffff);
-				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				skew = Wnaf.Fixed(wnaf, num, w);
 				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
 				Assert.True(skew == 0);
 			}
 			{
 				int[] wnaf_expected = new int[] { -1, -1, -1, -1, -1, -1, -1, 0xf };
 				num = new Scalar(0xeeeeeeee);
-				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				skew = Wnaf.Fixed(wnaf, num, w);
 				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
 				Assert.True(skew == 1);
 			}
 			{
 				int[] wnaf_expected = new int[] { 1, 0, 1, 0, 1, 0, 1, 0 };
 				num = new Scalar(0x01010101);
-				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				skew = Wnaf.Fixed(wnaf, num, w);
 				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
 				Assert.True(skew == 0);
 			}
 			{
 				int[] wnaf_expected = new int[] { -0xf, 0, 0xf, -0xf, 0, 0xf, 1, 0 };
 				num = new Scalar(0x01ef1ef1);
-				skew = GroupElement.secp256k1_wnaf_fixed(wnaf, num, w);
+				skew = Wnaf.Fixed(wnaf, num, w);
 				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
 				Assert.True(skew == 0);
 			}
