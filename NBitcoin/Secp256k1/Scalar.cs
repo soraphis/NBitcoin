@@ -17,6 +17,7 @@ namespace NBitcoin.Secp256k1
 		internal const uint SECP256K1_N_1 = 0xBFD25E8CU;
 		internal const uint SECP256K1_N_2 = 0xAF48A03BU;
 		internal const uint SECP256K1_N_3 = 0xBAAEDCE6U;
+
 		internal const uint SECP256K1_N_4 = 0xFFFFFFFEU;
 		internal const uint SECP256K1_N_5 = 0xFFFFFFFFU;
 		internal const uint SECP256K1_N_6 = 0xFFFFFFFFU;
@@ -124,7 +125,7 @@ namespace NBitcoin.Secp256k1
 			d7 = (uint)t;
 			return overflow;
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+
 		private static void reduce_512(ref uint d0, ref uint d1, ref uint d2, ref uint d3, ref uint d4, ref uint d5, ref uint d6, ref uint d7, Span<uint> l)
 		{
 			ulong c;
@@ -295,7 +296,6 @@ namespace NBitcoin.Secp256k1
 			return 2 * (mask == 0 ? 1 : 0) - 1;
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private static void mul_512(Span<uint> l, in Scalar a, in Scalar b)
 		{
 			/* 96 bit accumulator. */
@@ -384,7 +384,7 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(c1 == 0);
 			l[15] = c0;
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal static void sqr_512(Span<uint> l, in Scalar a)
 		{
 			/* 96 bit accumulator. */
@@ -446,7 +446,7 @@ namespace NBitcoin.Secp256k1
 			l[15] = c0;
 		}
 		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void muladd(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
 		{
 			uint tl, th;
@@ -501,7 +501,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void sumadd(ref uint c0, ref uint c1, ref uint c2, uint a)
 		{
 			uint over;
@@ -512,7 +512,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void sumadd_fast(ref uint c0, ref uint c1, ref uint c2, uint a)
 		{
 			c0 += (a);                 /* overflow is handled on the next line */
@@ -559,7 +559,7 @@ namespace NBitcoin.Secp256k1
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
 		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void extract(ref uint c0, ref uint c1, ref uint c2, out uint n)
 		{
 			(n) = c0;
@@ -568,7 +568,7 @@ namespace NBitcoin.Secp256k1
 			c2 = 0;
 		}
 		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void extract_fast(ref uint c0, ref uint c1, ref uint c2, out uint n)
 		{
 			(n) = c0;
@@ -835,7 +835,7 @@ namespace NBitcoin.Secp256k1
 				return ((d0 ^ 1) | d1 | d2 | d3 | d4 | d5 | d6 | d7) == 0;
 			}
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+
 		public readonly Scalar Sqr()
 		{
 			var (d0, d1, d2, d3, d4, d5, d6, d7) = this;
@@ -844,7 +844,7 @@ namespace NBitcoin.Secp256k1
 			reduce_512(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, l);
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+
 		public readonly Scalar Inverse()
 		{
 			ref readonly Scalar x = ref this;
@@ -1156,7 +1156,10 @@ namespace NBitcoin.Secp256k1
 				return hash;
 			}
 		}
-
+		public readonly Scalar InverseVariable()
+		{
+			return Inverse();
+		}
 		public readonly string ToC(string varname)
 		{
 			return $"secp256k1_scalar {varname} = {{ 0x{d0.ToString("X8")}UL, 0x{d1.ToString("X8")}UL, 0x{d2.ToString("X8")}UL, 0x{d3.ToString("X8")}UL, 0x{d4.ToString("X8")}UL, 0x{d5.ToString("X8")}UL, 0x{d6.ToString("X8")}UL, 0x{d7.ToString("X8")}UL }}";

@@ -115,6 +115,17 @@ namespace NBitcoin.Secp256k1
 			return (z0 == 0) | (z1 == 0x3FFFFFFUL);
 		}
 
+		public readonly bool EqualsXVariable(in GroupElementJacobian a)
+		{
+			FieldElement r, r2;
+			VERIFY_CHECK(!a.infinity);
+			r = a.z.Sqr();
+			r *= this;
+			r2 = a.x;
+			r2 = r2.NormalizeWeak();
+			return r.EqualsVariable(r2);
+		}
+
 		public readonly FieldElement InverseVariable()
 		{
 			return this.Inverse();
@@ -473,7 +484,6 @@ namespace NBitcoin.Secp256k1
 			r[0] = u;
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private readonly void secp256k1_fe_sqr_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9)
 		{
 			ulong c, d;
