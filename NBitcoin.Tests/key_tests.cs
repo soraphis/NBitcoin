@@ -297,6 +297,7 @@ namespace NBitcoin.Tests
 			Secp256k1.EC.Pubkey_parse(pubkey.ToBytes(), out var pubkeyge);
 			var ok2 = Secp256k1.ECDSA.Instance.SigVerify(r, s, pubkeyge, new Secp256k1.Scalar(h.ToBytes()));
 			Assert.Equal(ok1, ok2);
+			return ok1;
 		}
 
 		[Fact]
