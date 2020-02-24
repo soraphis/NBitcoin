@@ -20,12 +20,15 @@ namespace NBitcoin.Secp256k1
 
 		// ECMULT_TABLE_SIZE(WINDOW_G)
 		const int ArraySize = 8192;
-		const int WINDOW_G = 15;
-		const int WINDOW_A = 5;
+		internal const int WINDOW_G = 15;
+		internal const int WINDOW_A = 5;
 		// ECMULT_TABLE_SIZE(WINDOW_A)
-		const int ArraySize_A = 8;
+		internal const int ArraySize_A = 8;
 		internal readonly GroupElementStorage[] pre_g;
 		internal readonly GroupElementStorage[] pre_g_128;
+
+		// WNAF_SIZE(WINDOW_A - 1)
+		internal const int WNAFT_SIZE_A = 32;
 
 		public ECMultiplicationContext()
 		{
@@ -398,7 +401,7 @@ namespace NBitcoin.Secp256k1
  *  contain prej[0].z / a.z. The other zr[i] values = prej[i].z / prej[i-1].z.
  *  Prej's Z values are undefined, except for the last value.
  */
-		static void secp256k1_ecmult_odd_multiples_table(int n, Span<GroupElementJacobian> prej, Span<FieldElement> zr, in GroupElementJacobian a)
+		internal static void secp256k1_ecmult_odd_multiples_table(int n, Span<GroupElementJacobian> prej, Span<FieldElement> zr, in GroupElementJacobian a)
 		{
 			GroupElementJacobian d;
 			GroupElement a_ge, d_ge;
@@ -525,6 +528,32 @@ namespace NBitcoin.Secp256k1
 			}
 #endif
 			return last_set_bit + 1;
+		}
+
+		/** Fill a table 'pre' with precomputed odd multiples of a.
+ *
+ *  There are two versions of this function:
+ *  - secp256k1_ecmult_odd_multiples_table_globalz_windowa which brings its
+ *    resulting point set to a single constant Z denominator, stores the X and Y
+ *    coordinates as ge_storage points in pre, and stores the global Z in rz.
+ *    It only operates on tables sized for WINDOW_A wnaf multiples.
+ *  - secp256k1_ecmult_odd_multiples_table_storage_var, which converts its
+ *    resulting point set to actually affine points, and stores those in pre.
+ *    It operates on tables of any size, but uses heap-allocated temporaries.
+ *
+ *  To compute a*P + b*G, we compute a table for P using the first function,
+ *  and for G using the second (which requires an inverse, but it only needs to
+ *  happen once).
+ */
+		internal static void secp256k1_ecmult_odd_multiples_table_globalz_windowa(Span<GroupElement> pre, ref FieldElement globalz, in GroupElementJacobian a)
+		{
+			Span<GroupElementJacobian> prej = stackalloc GroupElementJacobian[ArraySize_A];
+			Span<FieldElement> zr = stackalloc FieldElement[ArraySize_A];
+
+			/* Compute the odd multiples in Jacobian form. */
+			secp256k1_ecmult_odd_multiples_table(ArraySize_A, prej, zr, a);
+			/* Bring them to the same Z denominator. */
+			secp256k1_ge_globalz_set_table_gej(ArraySize_A, pre, ref globalz, prej, zr);
 		}
 
 		[Conditional("SECP256K1_VERIFY")]

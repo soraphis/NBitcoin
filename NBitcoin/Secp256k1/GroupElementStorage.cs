@@ -23,5 +23,17 @@ namespace NBitcoin.Secp256k1
 		{
 			return new GroupElement(this.x.ToFieldElement(), this.y.ToFieldElement(), false);
 		}
+		public void Deconstruct(out FieldElementStorage x, out FieldElementStorage y)
+		{
+			x = this.x;
+			y = this.y;
+		}
+		public static void CMov(ref GroupElementStorage r, in GroupElementStorage a, int flag)
+		{
+			var (rx, ry) = r;
+			FieldElementStorage.CMov(ref rx, a.x, flag);
+			FieldElementStorage.CMov(ref ry, a.y, flag);
+			r = new GroupElementStorage(rx, ry);
+		}
 	}
 }

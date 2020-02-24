@@ -314,6 +314,7 @@ namespace NBitcoin.Tests
 		[Trait("UnitTest", "UnitTest")]
 		public void EnsureNoOptimization()
 		{
+			// This is not really a test, it show which methods do not have optimization off
 			HashSet<string> whitelist = new HashSet<string>();
 			whitelist.Add("get_Zero");
 			whitelist.Add("ToStorage");
@@ -335,7 +336,8 @@ namespace NBitcoin.Tests
 					continue;
 				if (method.Name.EndsWith("Variable") ||
 					method.Name.StartsWith("op_") ||
-					method.Name.StartsWith("VERIFY"))
+					method.Name.StartsWith("VERIFY") ||
+					method.Name.EndsWith("_CONST"))
 					continue;
 				var optimized = method.MethodImplementationFlags.HasFlag(MethodImplAttributes.NoOptimization);
 				if (method.Name.StartsWith("get_") && method.MethodImplementationFlags.HasFlag(MethodImplAttributes.AggressiveInlining))
@@ -436,6 +438,124 @@ namespace NBitcoin.Tests
 					test_sqrt(t, null);
 				}
 			}
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void run_ecmult_const_tests()
+		{
+			ecmult_const_mult_zero_one();
+			ecmult_const_random_mult();
+			ecmult_const_commutativity();
+			ecmult_const_chain_multiply();
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void ecmult_const_chain_multiply()
+		{
+			/* Check known result (randomly generated test problem from sage) */
+			Scalar scalar = Scalar.SECP256K1_SCALAR_CONST(
+				0x4968d524, 0x2abf9b7a, 0x466abbcf, 0x34b11b6d,
+				0xcd83d307, 0x827bed62, 0x05fad0ce, 0x18fae63b
+			);
+			GroupElementJacobian expected_point = GroupElementJacobian.SECP256K1_GEJ_CONST(
+				0x5494c15d, 0x32099706, 0xc2395f94, 0x348745fd,
+				0x757ce30e, 0x4e8c90fb, 0xa2bad184, 0xf883c69f,
+				0x5d195d20, 0xe191bf7f, 0x1be3e55f, 0x56a80196,
+				0x6071ad01, 0xf1462f66, 0xc997fa94, 0xdb858435
+			);
+			GroupElementJacobian point;
+			GroupElement res;
+			int i;
+			point = EC.G.ToGroupElementJacobian();
+
+			for (i = 0; i < 100; ++i)
+			{
+				GroupElement tmp;
+				tmp = point.ToGroupElement();
+				point = tmp.ECMultiplyConst(scalar, 256);
+			}
+			res = point.ToGroupElement();
+			ge_equals_gej(res, expected_point);
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void ecmult_const_random_mult()
+		{
+			/* random starting point A (on the curve) */
+			GroupElement a = GroupElement.SECP256K1_GE_CONST(
+				0x6d986544, 0x57ff52b8, 0xcf1b8126, 0x5b802a5b,
+				0xa97f9263, 0xb1e88044, 0x93351325, 0x91bc450a,
+				0x535c59f7, 0x325e5d2b, 0xc391fbe8, 0x3c12787c,
+				0x337e4a98, 0xe82a9011, 0x0123ba37, 0xdd769c7d
+			);
+			/* random initial factor xn */
+			Scalar xn = Scalar.SECP256K1_SCALAR_CONST(
+				0x649d4f77, 0xc4242df7, 0x7f2079c9, 0x14530327,
+				0xa31b876a, 0xd2d8ce2a, 0x2236d5c6, 0xd7b2029b
+			);
+			/* expected xn * A (from sage) */
+			GroupElement expected_b = GroupElement.SECP256K1_GE_CONST(
+				0x23773684, 0x4d209dc7, 0x098a786f, 0x20d06fcd,
+				0x070a38bf, 0xc11ac651, 0x03004319, 0x1e2a8786,
+				0xed8c3b8e, 0xc06dd57b, 0xd06ea66e, 0x45492b0f,
+				0xb84e4e1b, 0xfb77e21f, 0x96baae2a, 0x63dec956
+			);
+			GroupElementJacobian b = a.ECMultiplyConst(xn, 256);
+
+			Assert.True(a.IsValidVariable);
+			ge_equals_gej(expected_b, b);
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void ecmult_const_commutativity()
+		{
+			Scalar a;
+			Scalar b;
+			GroupElementJacobian res1;
+			GroupElementJacobian res2;
+			GroupElement mid1;
+			GroupElement mid2;
+			a = random_scalar_order_test();
+			b = random_scalar_order_test();
+
+			res1 = EC.G.ECMultiplyConst(a, 256);
+			res2 = EC.G.ECMultiplyConst(b, 256);
+			mid1 = res1.ToGroupElement();
+			mid2 = res2.ToGroupElement();
+			res1 = mid1.ECMultiplyConst(b, 256);
+			res2 = mid2.ECMultiplyConst(a, 256);
+			mid1 = res1.ToGroupElement();
+			mid2 = res2.ToGroupElement();
+			ge_equals_ge(mid1, mid2);
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
+		public void ecmult_const_mult_zero_one()
+		{
+			Scalar zero = Scalar.SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+			Scalar one = Scalar.SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 1);
+			Scalar negone;
+			GroupElementJacobian res1;
+			GroupElement res2;
+			GroupElement point;
+			negone = one.Negate();
+
+			point = random_group_element_test();
+			res1 = point.ECMultiplyConst(zero, 3);
+			res2 = res1.ToGroupElement();
+			Assert.True(res2.IsInfinity);
+			res1 = point.ECMultiplyConst(one, 2);
+			res2 = res1.ToGroupElement();
+			ge_equals_ge(res2, point);
+			res1 = point.ECMultiplyConst(negone, 256);
+			res1 = res1.Negate();
+			res2 = res1.ToGroupElement();
+			ge_equals_ge(res2, point);
 		}
 
 		[Fact]

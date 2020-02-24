@@ -12,7 +12,7 @@ namespace NBitcoin.Secp256k1
 		internal readonly int magnitude;
 		internal readonly bool normalized;
 
-		static readonly FieldElement _Zero = new FieldElement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		static readonly FieldElement _Zero = new FieldElement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, true);
 
 		public static ref readonly FieldElement Zero => ref _Zero;
 
@@ -792,24 +792,23 @@ namespace NBitcoin.Secp256k1
 			r.VERIFY();
 			return r;
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+		
 		public readonly FieldElement Add(in FieldElement a)
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
 			a.VERIFY();
-			n0 += a.n0;
-			n1 += a.n1;
-			n2 += a.n2;
-			n3 += a.n3;
-			n4 += a.n4;
-			n5 += a.n5;
-			n6 += a.n6;
-			n7 += a.n7;
-			n8 += a.n8;
-			n9 += a.n9;
-			magnitude += a.magnitude;
-			normalized = false;
-			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var r = new FieldElement(
+				n0 + a.n0,
+				n1 + a.n1,
+				n2 + a.n2,
+				n3 + a.n3,
+				n4 + a.n4,
+				n5 + a.n5,
+				n6 + a.n6,
+				n7 + a.n7,
+				n8 + a.n8,
+				n9 + a.n9,
+				magnitude + a.magnitude,
+				false);
 			r.VERIFY();
 			return r;
 		}

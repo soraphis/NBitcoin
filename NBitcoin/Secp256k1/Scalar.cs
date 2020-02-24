@@ -12,10 +12,6 @@ namespace NBitcoin.Secp256k1
 		public static ref readonly Scalar Zero => ref _Zero;
 		static readonly Scalar _One = new Scalar(1, 0, 0, 0, 0, 0, 0, 0);
 		public static ref readonly Scalar One => ref _One;
-		static readonly Scalar _N = new Scalar(SECP256K1_N_0, SECP256K1_N_1, SECP256K1_N_2, SECP256K1_N_3, SECP256K1_N_4, SECP256K1_N_5, SECP256K1_N_6, SECP256K1_N_7);
-		public static ref readonly Scalar N => ref _N;
-		static readonly Scalar _NC = new Scalar(SECP256K1_N_C_0, SECP256K1_N_C_1, SECP256K1_N_C_2, SECP256K1_N_C_3, SECP256K1_N_C_4, 0, 0, 0);
-		public static ref readonly Scalar NC => ref _NC;
 
 		internal const uint SECP256K1_N_0 = 0xD0364141U;
 		internal const uint SECP256K1_N_1 = 0xBFD25E8CU;
@@ -30,6 +26,18 @@ namespace NBitcoin.Secp256k1
 		internal const uint SECP256K1_N_C_2 = ~SECP256K1_N_2;
 		internal const uint SECP256K1_N_C_3 = ~SECP256K1_N_3;
 		internal const uint SECP256K1_N_C_4 = 1;
+
+
+		/* Limbs of half the secp256k1 order. */
+		internal const uint SECP256K1_N_H_0 = (0x681B20A0U);
+		internal const uint SECP256K1_N_H_1 = (0xDFE92F46U);
+		internal const uint SECP256K1_N_H_2 = (0x57A4501DU);
+		internal const uint SECP256K1_N_H_3 = (0x5D576E73U);
+		internal const uint SECP256K1_N_H_4 = (0xFFFFFFFFU);
+		internal const uint SECP256K1_N_H_5 = (0xFFFFFFFFU);
+		internal const uint SECP256K1_N_H_6 = (0xFFFFFFFFU);
+		internal const uint SECP256K1_N_H_7 = (0x7FFFFFFFU);
+
 		readonly uint d0, d1, d2, d3, d4, d5, d6, d7;
 		public Scalar(uint d0, uint d1, uint d2, uint d3, uint d4, uint d5, uint d6, uint d7)
 		{
@@ -259,6 +267,34 @@ namespace NBitcoin.Secp256k1
 			/* Final reduction of r. */
 			Reduce(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, (int)c + new Scalar(d0, d1, d2, d3, d4, d5, d6, d7).CheckOverflow());
 		}
+
+		internal int CondNegate(int flag, out Scalar r)
+		{
+			var (rd0, rd1, rd2, rd3, rd4, rd5, rd6, rd7) = this;
+			/* If we are flag = 0, mask = 00...00 and this is a no-op;
+     * if we are flag = 1, mask = 11...11 and this is identical to secp256k1_scalar_negate */
+			uint mask = (flag == 0 ? 1U : 0) - 1;
+			uint nonzero = 0xFFFFFFFFU * (IsZero ? 0U : 1);
+			ulong t = (ulong)(rd0 ^ mask) + ((SECP256K1_N_0 + 1) & mask);
+			rd0 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(rd1 ^ mask) + (SECP256K1_N_1 & mask);
+			rd1 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(rd2 ^ mask) + (SECP256K1_N_2 & mask);
+			rd2 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(rd3 ^ mask) + (SECP256K1_N_3 & mask);
+			rd3 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(rd4 ^ mask) + (SECP256K1_N_4 & mask);
+			rd4 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(rd5 ^ mask) + (SECP256K1_N_5 & mask);
+			rd5 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(rd6 ^ mask) + (SECP256K1_N_6 & mask);
+			rd6 = (uint)(t & nonzero); t >>= 32;
+			t += (ulong)(rd7 ^ mask) + (SECP256K1_N_7 & mask);
+			rd7 = (uint)(t & nonzero);
+			r = new Scalar(rd0, rd1, rd2, rd3, rd4, rd5, rd6, rd7);
+			return 2 * (mask == 0 ? 1 : 0) - 1;
+		}
+
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		private static void mul_512(Span<uint> l, in Scalar a, in Scalar b)
 		{
@@ -713,6 +749,37 @@ namespace NBitcoin.Secp256k1
 			0x00000000U, 0x00000000U, 0x00000000U, 0x0000E443U,
 			0x7ED6010EU, 0x88286F54U, 0x7FA90ABFU, 0xE4C42212U
 		);
+		public bool IsEven
+		{
+			[MethodImpl(MethodImplOptions.AggressiveInlining)]
+			get
+			{
+				return (d0 & 1) == 0;
+			}
+		}
+
+		public bool IsHigh
+		{
+			get
+			{
+				int yes = 0;
+				int no = 0;
+				no |= (d7 < SECP256K1_N_H_7 ? 1 : 0);
+				yes |= (d7 > SECP256K1_N_H_7 ? 1 : 0) & ~no;
+				no |= (d6 < SECP256K1_N_H_6 ? 1 : 0) & ~yes; /* No need for a > check. */
+				no |= (d5 < SECP256K1_N_H_5 ? 1 : 0) & ~yes; /* No need for a > check. */
+				no |= (d4 < SECP256K1_N_H_4 ? 1 : 0) & ~yes; /* No need for a > check. */
+				no |= (d3 < SECP256K1_N_H_3 ? 1 : 0) & ~yes;
+				yes |= (d3 > SECP256K1_N_H_3 ? 1 : 0) & ~no;
+				no |= (d2 < SECP256K1_N_H_2 ? 1 : 0) & ~yes;
+				yes |= (d2 > SECP256K1_N_H_2 ? 1 : 0) & ~no;
+				no |= (d1 < SECP256K1_N_H_1 ? 1 : 0) & ~yes;
+				yes |= (d1 > SECP256K1_N_H_1 ? 1 : 0) & ~no;
+				yes |= (d0 > SECP256K1_N_H_0 ? 1 : 0) & ~no;
+				return yes != 0;
+			}
+		}
+
 		public readonly void SplitLambda(out Scalar r1, out Scalar r2)
 		{
 			/* these _var calls are constant time since the shift amount is constant */
@@ -969,13 +1036,32 @@ namespace NBitcoin.Secp256k1
 		{
 			return a.Multiply(b);
 		}
-		public Scalar Multiply(in Scalar b)
+		public readonly Scalar Multiply(in Scalar b)
 		{
 			var (d0, d1, d2, d3, d4, d5, d6, d7) = this;
 			Span<uint> l = stackalloc uint[16];
 			mul_512(l, this, b);
 			reduce_512(ref d0, ref d1, ref d2, ref d3, ref d4, ref d5, ref d6, ref d7, l);
 			return new Scalar(d0, d1, d2, d3, d4, d5, d6, d7);
+		}
+
+		public readonly int ShrInt(int n, out Scalar ret)
+		{
+			VERIFY_CHECK(n > 0);
+			VERIFY_CHECK(n < 16);
+			var v = (int)(d0 & ((1 << n) - 1));
+			ret = new Scalar
+			(
+				(d0 >> n) + (d1 << (32 - n)),
+				(d1 >> n) + (d2 << (32 - n)),
+				(d2 >> n) + (d3 << (32 - n)),
+				(d3 >> n) + (d4 << (32 - n)),
+				(d4 >> n) + (d5 << (32 - n)),
+				(d5 >> n) + (d6 << (32 - n)),
+				(d6 >> n) + (d7 << (32 - n)),
+				(d7 >> n)
+			);
+			return v;
 		}
 
 		public readonly Scalar Negate()
