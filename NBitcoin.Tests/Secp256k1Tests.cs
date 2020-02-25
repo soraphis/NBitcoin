@@ -906,7 +906,7 @@ namespace NBitcoin.Tests
 						zr2 = zr2 * gej[i1].z;
 						Assert.True(zr2.EqualsVariable(resj.z));
 						/* Normal doubling. */
-						resj = gej[i2].DoubleVariable(out _);
+						resj = gej[i2].DoubleVariable();
 						ge_equals_gej(@ref, resj);
 					}
 

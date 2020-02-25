@@ -367,7 +367,7 @@ namespace NBitcoin.Secp256k1
 				GroupElementStorage correction_lam_stor = default;
 				GroupElementStorage a2_stor;
 				GroupElementJacobian tmpj = correction.ToGroupElementJacobian();
-				tmpj = tmpj.DoubleVariable(out _);
+				tmpj = tmpj.DoubleVariable();
 				correction = tmpj.ToGroupElement();
 				correction_1_stor = this.ToStorage();
 				if (size > 128)

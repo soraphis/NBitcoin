@@ -50,7 +50,7 @@ namespace NBitcoin.Secp256k1
 				g_128j = gj;
 				for (i = 0; i < 128; i++)
 				{
-					g_128j = g_128j.DoubleVariable(out _);
+					g_128j = g_128j.DoubleVariable();
 				}
 				secp256k1_ecmult_odd_multiples_table_storage_var(ArraySize, pre_g_128, g_128j);
 			}
@@ -67,7 +67,7 @@ namespace NBitcoin.Secp256k1
 			int i;
 
 			VERIFY_CHECK(!a.infinity);
-			d = a.DoubleVariable(out _);
+			d = a.DoubleVariable();
 
 			/* First, we perform all the additions in an isomorphic curve obtained by multiplying
 			 * all `z` coordinates by 1/`d.z`. In these coordinates `d` is affine so we can use
@@ -329,7 +329,7 @@ namespace NBitcoin.Secp256k1
 			for (i = bits - 1; i >= 0; i--)
 			{
 				int n;
-				r = r.DoubleVariable(out _);
+				r = r.DoubleVariable();
 				for (np = 0; np < no; ++np)
 				{
 					fixed (StraussPointState* ps_span_np = &ps_span[np])
@@ -408,7 +408,7 @@ namespace NBitcoin.Secp256k1
 			int i;
 
 			VERIFY_CHECK(!a.infinity);
-			d = a.DoubleVariable(out _);
+			d = a.DoubleVariable();
 
 			/*
 			 * Perform the additions on an isomorphism where 'd' is affine: drop the z coordinate

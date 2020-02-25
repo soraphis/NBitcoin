@@ -155,141 +155,142 @@ namespace NBitcoin.Secp256k1
 
 		private static void reduce_512(Span<uint> d, Span<uint> l)
 		{
+			Span<uint> n = stackalloc uint[DCount];
+			l.Slice(8).CopyTo(n);
 			ulong c;
-			uint n0 = l[8], n1 = l[9], n2 = l[10], n3 = l[11], n4 = l[12], n5 = l[13], n6 = l[14], n7 = l[15];
-			uint m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12;
-			uint p0, p1, p2, p3, p4, p5, p6, p7, p8;
+			Span<uint> m = stackalloc uint[13];
+			Span<uint> p = stackalloc uint[9];
 
 			/* 96 bit accumulator. */
-			uint c0, c1, c2;
+			Span<uint> acc = stackalloc uint[3];
 
 			/* Reduce 512 bits into 385. */
 			/* m[0..12] = l[0..7] + n[0..7] * SECP256K1_N_C. */
-			c0 = l[0]; c1 = 0; c2 = 0;
-			muladd_fast(ref c0, ref c1, ref c2, n0, SECP256K1_N_C_0);
-			extract_fast(ref c0, ref c1, ref c2, out m0);
-			sumadd_fast(ref c0, ref c1, ref c2, l[1]);
-			muladd(ref c0, ref c1, ref c2, n1, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, n0, SECP256K1_N_C_1);
-			extract(ref c0, ref c1, ref c2, out m1);
-			sumadd(ref c0, ref c1, ref c2, l[2]);
-			muladd(ref c0, ref c1, ref c2, n2, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, n1, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, n0, SECP256K1_N_C_2);
-			extract(ref c0, ref c1, ref c2, out m2);
-			sumadd(ref c0, ref c1, ref c2, l[3]);
-			muladd(ref c0, ref c1, ref c2, n3, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, n2, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, n1, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, n0, SECP256K1_N_C_3);
-			extract(ref c0, ref c1, ref c2, out m3);
-			sumadd(ref c0, ref c1, ref c2, l[4]);
-			muladd(ref c0, ref c1, ref c2, n4, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, n3, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, n2, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, n1, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, n0);
-			extract(ref c0, ref c1, ref c2, out m4);
-			sumadd(ref c0, ref c1, ref c2, l[5]);
-			muladd(ref c0, ref c1, ref c2, n5, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, n4, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, n3, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, n2, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, n1);
-			extract(ref c0, ref c1, ref c2, out m5);
-			sumadd(ref c0, ref c1, ref c2, l[6]);
-			muladd(ref c0, ref c1, ref c2, n6, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, n5, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, n4, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, n3, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, n2);
-			extract(ref c0, ref c1, ref c2, out m6);
-			sumadd(ref c0, ref c1, ref c2, l[7]);
-			muladd(ref c0, ref c1, ref c2, n7, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, n6, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, n5, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, n4, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, n3);
-			extract(ref c0, ref c1, ref c2, out m7);
-			muladd(ref c0, ref c1, ref c2, n7, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, n6, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, n5, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, n4);
-			extract(ref c0, ref c1, ref c2, out m8);
-			muladd(ref c0, ref c1, ref c2, n7, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, n6, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, n5);
-			extract(ref c0, ref c1, ref c2, out m9);
-			muladd(ref c0, ref c1, ref c2, n7, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, n6);
-			extract(ref c0, ref c1, ref c2, out m10);
-			sumadd_fast(ref c0, ref c1, ref c2, n7);
-			extract_fast(ref c0, ref c1, ref c2, out m11);
-			VERIFY_CHECK(c0 <= 1);
-			m12 = c0;
+			acc[0] = l[0]; acc[1] = 0; acc[2] = 0;
+			muladd_fast(acc, n[0], SECP256K1_N_C_0);
+			extract_fast(acc, out m[0]);
+			sumadd_fast(acc, l[1]);
+			muladd(acc, n[1], SECP256K1_N_C_0);
+			muladd(acc, n[0], SECP256K1_N_C_1);
+			extract(acc, out m[1]);
+			sumadd(acc, l[2]);
+			muladd(acc, n[2], SECP256K1_N_C_0);
+			muladd(acc, n[1], SECP256K1_N_C_1);
+			muladd(acc, n[0], SECP256K1_N_C_2);
+			extract(acc, out m[2]);
+			sumadd(acc, l[3]);
+			muladd(acc, n[3], SECP256K1_N_C_0);
+			muladd(acc, n[2], SECP256K1_N_C_1);
+			muladd(acc, n[1], SECP256K1_N_C_2);
+			muladd(acc, n[0], SECP256K1_N_C_3);
+			extract(acc, out m[3]);
+			sumadd(acc, l[4]);
+			muladd(acc, n[4], SECP256K1_N_C_0);
+			muladd(acc, n[3], SECP256K1_N_C_1);
+			muladd(acc, n[2], SECP256K1_N_C_2);
+			muladd(acc, n[1], SECP256K1_N_C_3);
+			sumadd(acc, n[0]);
+			extract(acc, out m[4]);
+			sumadd(acc, l[5]);
+			muladd(acc, n[5], SECP256K1_N_C_0);
+			muladd(acc, n[4], SECP256K1_N_C_1);
+			muladd(acc, n[3], SECP256K1_N_C_2);
+			muladd(acc, n[2], SECP256K1_N_C_3);
+			sumadd(acc, n[1]);
+			extract(acc, out m[5]);
+			sumadd(acc, l[6]);
+			muladd(acc, n[6], SECP256K1_N_C_0);
+			muladd(acc, n[5], SECP256K1_N_C_1);
+			muladd(acc, n[4], SECP256K1_N_C_2);
+			muladd(acc, n[3], SECP256K1_N_C_3);
+			sumadd(acc, n[2]);
+			extract(acc, out m[6]);
+			sumadd(acc, l[7]);
+			muladd(acc, n[7], SECP256K1_N_C_0);
+			muladd(acc, n[6], SECP256K1_N_C_1);
+			muladd(acc, n[5], SECP256K1_N_C_2);
+			muladd(acc, n[4], SECP256K1_N_C_3);
+			sumadd(acc, n[3]);
+			extract(acc, out m[7]);
+			muladd(acc, n[7], SECP256K1_N_C_1);
+			muladd(acc, n[6], SECP256K1_N_C_2);
+			muladd(acc, n[5], SECP256K1_N_C_3);
+			sumadd(acc, n[4]);
+			extract(acc, out m[8]);
+			muladd(acc, n[7], SECP256K1_N_C_2);
+			muladd(acc, n[6], SECP256K1_N_C_3);
+			sumadd(acc, n[5]);
+			extract(acc, out m[9]);
+			muladd(acc, n[7], SECP256K1_N_C_3);
+			sumadd(acc, n[6]);
+			extract(acc, out m[10]);
+			sumadd_fast(acc, n[7]);
+			extract_fast(acc, out m[11]);
+			VERIFY_CHECK(acc[0] <= 1);
+			m[12] = acc[0];
 
 			/* Reduce 385 bits into 258. */
 			/* p[0..8] = m[0..7] + m[8..12] * SECP256K1_N_C. */
-			c0 = m0; c1 = 0; c2 = 0;
-			muladd_fast(ref c0, ref c1, ref c2, m8, SECP256K1_N_C_0);
-			extract_fast(ref c0, ref c1, ref c2, out p0);
-			sumadd_fast(ref c0, ref c1, ref c2, m1);
-			muladd(ref c0, ref c1, ref c2, m9, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, m8, SECP256K1_N_C_1);
-			extract(ref c0, ref c1, ref c2, out p1);
-			sumadd(ref c0, ref c1, ref c2, m2);
-			muladd(ref c0, ref c1, ref c2, m10, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, m9, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, m8, SECP256K1_N_C_2);
-			extract(ref c0, ref c1, ref c2, out p2);
-			sumadd(ref c0, ref c1, ref c2, m3);
-			muladd(ref c0, ref c1, ref c2, m11, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, m10, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, m9, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, m8, SECP256K1_N_C_3);
-			extract(ref c0, ref c1, ref c2, out p3);
-			sumadd(ref c0, ref c1, ref c2, m4);
-			muladd(ref c0, ref c1, ref c2, m12, SECP256K1_N_C_0);
-			muladd(ref c0, ref c1, ref c2, m11, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, m10, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, m9, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, m8);
-			extract(ref c0, ref c1, ref c2, out p4);
-			sumadd(ref c0, ref c1, ref c2, m5);
-			muladd(ref c0, ref c1, ref c2, m12, SECP256K1_N_C_1);
-			muladd(ref c0, ref c1, ref c2, m11, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, m10, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, m9);
-			extract(ref c0, ref c1, ref c2, out p5);
-			sumadd(ref c0, ref c1, ref c2, m6);
-			muladd(ref c0, ref c1, ref c2, m12, SECP256K1_N_C_2);
-			muladd(ref c0, ref c1, ref c2, m11, SECP256K1_N_C_3);
-			sumadd(ref c0, ref c1, ref c2, m10);
-			extract(ref c0, ref c1, ref c2, out p6);
-			sumadd_fast(ref c0, ref c1, ref c2, m7);
-			muladd_fast(ref c0, ref c1, ref c2, m12, SECP256K1_N_C_3);
-			sumadd_fast(ref c0, ref c1, ref c2, m11);
-			extract_fast(ref c0, ref c1, ref c2, out p7);
-			p8 = c0 + m12;
-			VERIFY_CHECK(p8 <= 2);
+			acc[0] = m[0]; acc[1] = 0; acc[2] = 0;
+			muladd_fast(acc, m[8], SECP256K1_N_C_0);
+			extract_fast(acc, out p[0]);
+			sumadd_fast(acc, m[1]);
+			muladd(acc, m[9], SECP256K1_N_C_0);
+			muladd(acc, m[8], SECP256K1_N_C_1);
+			extract(acc, out p[1]);
+			sumadd(acc, m[2]);
+			muladd(acc, m[10], SECP256K1_N_C_0);
+			muladd(acc, m[9], SECP256K1_N_C_1);
+			muladd(acc, m[8], SECP256K1_N_C_2);
+			extract(acc, out p[2]);
+			sumadd(acc, m[3]);
+			muladd(acc, m[11], SECP256K1_N_C_0);
+			muladd(acc, m[10], SECP256K1_N_C_1);
+			muladd(acc, m[9], SECP256K1_N_C_2);
+			muladd(acc, m[8], SECP256K1_N_C_3);
+			extract(acc, out p[3]);
+			sumadd(acc, m[4]);
+			muladd(acc, m[12], SECP256K1_N_C_0);
+			muladd(acc, m[11], SECP256K1_N_C_1);
+			muladd(acc, m[10], SECP256K1_N_C_2);
+			muladd(acc, m[9], SECP256K1_N_C_3);
+			sumadd(acc, m[8]);
+			extract(acc, out p[4]);
+			sumadd(acc, m[5]);
+			muladd(acc, m[12], SECP256K1_N_C_1);
+			muladd(acc, m[11], SECP256K1_N_C_2);
+			muladd(acc, m[10], SECP256K1_N_C_3);
+			sumadd(acc, m[9]);
+			extract(acc, out p[5]);
+			sumadd(acc, m[6]);
+			muladd(acc, m[12], SECP256K1_N_C_2);
+			muladd(acc, m[11], SECP256K1_N_C_3);
+			sumadd(acc, m[10]);
+			extract(acc, out p[6]);
+			sumadd_fast(acc, m[7]);
+			muladd_fast(acc, m[12], SECP256K1_N_C_3);
+			sumadd_fast(acc, m[11]);
+			extract_fast(acc, out p[7]);
+			p[8]= acc[0] + m[12];
+			VERIFY_CHECK(p[8]<= 2);
 
 			/* Reduce 258 bits into 256. */
 			/* r[0..7] = p[0..7] + p[8] * SECP256K1_N_C. */
-			c = p0 + (ulong)SECP256K1_N_C_0 * p8;
+			c = p[0]+ (ulong)SECP256K1_N_C_0 * p[8];
 			d[0] = (uint)c; c >>= 32;
-			c += p1 + (ulong)SECP256K1_N_C_1 * p8;
+			c += p[1]+ (ulong)SECP256K1_N_C_1 * p[8];
 			d[1] = (uint)c; c >>= 32;
-			c += p2 + (ulong)SECP256K1_N_C_2 * p8;
+			c += p[2]+ (ulong)SECP256K1_N_C_2 * p[8];
 			d[2] = (uint)c; c >>= 32;
-			c += p3 + (ulong)SECP256K1_N_C_3 * p8;
+			c += p[3]+ (ulong)SECP256K1_N_C_3 * p[8];
 			d[3] = (uint)c; c >>= 32;
-			c += p4 + (ulong)p8;
+			c += p[4]+ (ulong)p[8];
 			d[4] = (uint)c; c >>= 32;
-			c += p5;
+			c += p[5];
 			d[5] = (uint)c; c >>= 32;
-			c += p6;
+			c += p[6];
 			d[6] = (uint)c; c >>= 32;
-			c += p7;
+			c += p[7];
 			d[7] = (uint)c; c >>= 32;
 
 			/* Final reduction of r. */
@@ -766,7 +767,7 @@ namespace NBitcoin.Secp256k1
 		}
 		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void muladd(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
+		static void muladd(Span<uint> c, uint a, uint b)
 		{
 			uint tl, th;
 			{
@@ -774,16 +775,16 @@ namespace NBitcoin.Secp256k1
 				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
 				tl = (uint)t;
 			}
-			c0 += tl;                 /* overflow is handled on the next line */
-			th += (c0 < tl) ? 1U : 0;  /* at most 0xFFFFFFFF */
-			c1 += th;                 /* overflow is handled on the next line */
-			c2 += (c1 < th) ? 1U : 0;  /* never overflows by contract (verified in the next line) */
-			VERIFY_CHECK((c1 >= th) || (c2 != 0));
+			c[0] += tl;                 /* overflow is handled on the next line */
+			th += (c[0] < tl) ? 1U : 0;  /* at most 0xFFFFFFFF */
+			c[1] += th;                 /* overflow is handled on the next line */
+			c[2] += (c[1] < th) ? 1U : 0;  /* never overflows by contract (verified in the next line) */
+			VERIFY_CHECK((c[1] >= th) || (c[2] != 0));
 		}
 
 		/** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
 		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void muladd_fast(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
+		static void muladd_fast(Span<uint> c, uint a, uint b)
 		{
 			uint tl, th;
 			{
@@ -791,13 +792,13 @@ namespace NBitcoin.Secp256k1
 				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
 				tl = (uint)t;
 			}
-			c0 += tl;                 /* overflow is handled on the next line */
-			th += (c0 < tl) ? 1U : 0U;  /* at most 0xFFFFFFFF */
-			c1 += th;                 /* never overflows by contract (verified in the next line) */
-			VERIFY_CHECK(c1 >= th);
+			c[0] += tl;                 /* overflow is handled on the next line */
+			th += (c[0] < tl) ? 1U : 0U;  /* at most 0xFFFFFFFF */
+			c[1] += th;                 /* never overflows by contract (verified in the next line) */
+			VERIFY_CHECK(c[1] >= th);
 		}
 		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void muladd2(ref uint c0, ref uint c1, ref uint c2, uint a, uint b)
+		static void muladd2(Span<uint> c, uint a, uint b)
 		{
 			uint tl, th, th2, tl2;
 			{
@@ -806,38 +807,38 @@ namespace NBitcoin.Secp256k1
 				tl = (uint)t;
 			}
 			th2 = th + th;                  /* at most 0xFFFFFFFE (in case th was 0x7FFFFFFF) */
-			c2 += (th2 < th) ? 1U : 0;       /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((th2 >= th) || (c2 != 0));
+			c[2] += (th2 < th) ? 1U : 0;       /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((th2 >= th) || (c[2] != 0));
 			tl2 = tl + tl;                  /* at most 0xFFFFFFFE (in case the lowest 63 bits of tl were 0x7FFFFFFF) */
 			th2 += (tl2 < tl) ? 1U : 0;      /* at most 0xFFFFFFFF */
-			c0 += tl2;                      /* overflow is handled on the next line */
-			th2 += (c0 < tl2) ? 1U : 0;      /* second overflow is handled on the next line */
-			c2 += (c0 < tl2 ? 1U : 0) & (th2 == 0 ? 1U : 0);  /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c0 >= tl2) || (th2 != 0) || (c2 != 0));
-			c1 += th2;                      /* overflow is handled on the next line */
-			c2 += (c1 < th2) ? 1U : 0;       /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c1 >= th2) || (c2 != 0));
+			c[0] += tl2;                      /* overflow is handled on the next line */
+			th2 += (c[0] < tl2) ? 1U : 0;      /* second overflow is handled on the next line */
+			c[2] += (c[0] < tl2 ? 1U : 0) & (th2 == 0 ? 1U : 0);  /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((c[0] >= tl2) || (th2 != 0) || (c[2] != 0));
+			c[1] += th2;                      /* overflow is handled on the next line */
+			c[2] += (c[1] < th2) ? 1U : 0;       /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((c[1] >= th2) || (c[2] != 0));
 		}
 
 		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void sumadd(ref uint c0, ref uint c1, ref uint c2, uint a)
+		static void sumadd(Span<uint> acc, uint a)
 		{
 			uint over;
-			c0 += (a);                  /* overflow is handled on the next line */
-			over = (c0 < (a)) ? 1U : 0;
-			c1 += over;                 /* overflow is handled on the next line */
-			c2 += (c1 < over) ? 1U : 0;  /* never overflows by contract */
+			acc[0] += (a);                  /* overflow is handled on the next line */
+			over = (acc[0] < (a)) ? 1U : 0;
+			acc[1] += over;                 /* overflow is handled on the next line */
+			acc[2] += (acc[1] < over) ? 1U : 0;  /* never overflows by contract */
 		}
 
 		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void sumadd_fast(ref uint c0, ref uint c1, ref uint c2, uint a)
+		static void sumadd_fast(Span<uint> acc, uint a)
 		{
-			c0 += (a);                 /* overflow is handled on the next line */
-			c1 += (c0 < (a)) ? 1U : 0;  /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c1 != 0) | (c0 >= (a)));
-			VERIFY_CHECK(c2 == 0);
+			acc[0] += (a);                 /* overflow is handled on the next line */
+			acc[1] += (acc[0] < (a)) ? 1U : 0;  /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((acc[1] != 0) | (acc[0] >= (a)));
+			VERIFY_CHECK(acc[2] == 0);
 		}
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly Scalar Add(in Scalar b)
@@ -872,21 +873,21 @@ namespace NBitcoin.Secp256k1
 		}
 		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. */
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void extract(ref uint c0, ref uint c1, ref uint c2, out uint n)
+		static void extract(Span<uint> acc, out uint n)
 		{
-			(n) = c0;
-			c0 = c1;
-			c1 = c2;
-			c2 = 0;
+			(n) = acc[0];
+			acc[0] = acc[1];
+			acc[1] = acc[2];
+			acc[2] = 0;
 		}
 		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void extract_fast(ref uint c0, ref uint c1, ref uint c2, out uint n)
+		static void extract_fast(Span<uint> acc, out uint n)
 		{
-			(n) = c0;
-			c0 = c1;
-			c1 = 0;
-			VERIFY_CHECK(c2 == 0);
+			(n) = acc[0];
+			acc[0] = acc[1];
+			acc[1] = 0;
+			VERIFY_CHECK(acc[2] == 0);
 		}
 
 		[Conditional("SECP256K1_VERIFY")]

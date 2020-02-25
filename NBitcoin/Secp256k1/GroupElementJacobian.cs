@@ -276,7 +276,7 @@ namespace NBitcoin.Secp256k1
 			{
 				if (i.NormalizesToZeroVariable())
 				{
-					return a.DoubleVariable(out _);
+					return a.DoubleVariable();
 				}
 				else
 				{
@@ -303,6 +303,14 @@ namespace NBitcoin.Secp256k1
 			return new GroupElementJacobian(rx, ry, rz, rinfinity);
 		}
 
+		public readonly GroupElementJacobian DoubleVariable()
+		{
+			if (infinity)
+			{
+				return GroupElementJacobian.Infinity;
+			}
+			return this.DoubleNonZero();
+		}
 		public readonly GroupElementJacobian DoubleVariable(out FieldElement rzr)
 		{
 			ref readonly GroupElementJacobian a = ref this;
