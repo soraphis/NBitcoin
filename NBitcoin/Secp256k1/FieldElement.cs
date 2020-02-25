@@ -63,21 +63,21 @@ namespace NBitcoin.Secp256k1
 
 		public readonly bool NormalizesToZeroVariable()
 		{
-			uint t0, t1, t2, t3, t4, t5, t6, t7, t8, t9;
+			Span<uint> t = stackalloc uint[NCount];
 			uint z0, z1;
 			uint x;
 
-			t0 = n0;
-			t9 = n9;
+			t[0] = n0;
+			t[9] = n9;
 
 			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
-			x = t9 >> 22;
+			x = t[9] >> 22;
 
 			/* The first pass ensures the magnitude is 1, ... */
-			t0 += x * 0x3D1U;
+			t[0] += x * 0x3D1U;
 
 			/* z0 tracks a possible raw value of 0, z1 tracks a possible raw value of P */
-			z0 = t0 & 0x3FFFFFFU;
+			z0 = t[0] & 0x3FFFFFFU;
 			z1 = z0 ^ 0x3D0U;
 
 			/* Fast return path should catch the majority of cases */
@@ -86,31 +86,32 @@ namespace NBitcoin.Secp256k1
 				return false;
 			}
 
-			t1 = n1;
-			t2 = n2;
-			t3 = n3;
-			t4 = n4;
-			t5 = n5;
-			t6 = n6;
-			t7 = n7;
-			t8 = n8;
 
-			t9 &= 0x03FFFFFU;
-			t1 += (x << 6);
+			t[1] = n1;
+			t[2] = n2;
+			t[3] = n3;
+			t[4] = n4;
+			t[5] = n5;
+			t[6] = n6;
+			t[7] = n7;
+			t[8] = n8;
 
-			t1 += (t0 >> 26);
-			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU; z0 |= t1; z1 &= t1 ^ 0x40U;
-			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU; z0 |= t2; z1 &= t2;
-			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU; z0 |= t3; z1 &= t3;
-			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU; z0 |= t4; z1 &= t4;
-			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU; z0 |= t5; z1 &= t5;
-			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU; z0 |= t6; z1 &= t6;
-			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU; z0 |= t7; z1 &= t7;
-			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU; z0 |= t8; z1 &= t8;
-			z0 |= t9; z1 &= t9 ^ 0x3C00000U;
+			t[9] &= 0x03FFFFFU;
+			t[1] += (x << 6);
+
+			t[1] += (t[0] >> 26);
+			t[2] += (t[1] >> 26); t[1] &= 0x3FFFFFFU; z0 |= t[1]; z1 &= t[1] ^ 0x40U;
+			t[3] += (t[2] >> 26); t[2] &= 0x3FFFFFFU; z0 |= t[2]; z1 &= t[2];
+			t[4] += (t[3] >> 26); t[3] &= 0x3FFFFFFU; z0 |= t[3]; z1 &= t[3];
+			t[5] += (t[4] >> 26); t[4] &= 0x3FFFFFFU; z0 |= t[4]; z1 &= t[4];
+			t[6] += (t[5] >> 26); t[5] &= 0x3FFFFFFU; z0 |= t[5]; z1 &= t[5];
+			t[7] += (t[6] >> 26); t[6] &= 0x3FFFFFFU; z0 |= t[6]; z1 &= t[6];
+			t[8] += (t[7] >> 26); t[7] &= 0x3FFFFFFU; z0 |= t[7]; z1 &= t[7];
+			t[9] += (t[8] >> 26); t[8] &= 0x3FFFFFFU; z0 |= t[8]; z1 &= t[8];
+			z0 |= t[9]; z1 &= t[9] ^ 0x3C00000U;
 
 			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
-			VERIFY_CHECK(t9 >> 23 == 0);
+			VERIFY_CHECK(t[9] >> 23 == 0);
 
 			return (z0 == 0) | (z1 == 0x3FFFFFFUL);
 		}
@@ -152,11 +153,9 @@ namespace NBitcoin.Secp256k1
 			VERIFY();
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly bool Sqrt(out FieldElement result)
 		{
 			ref readonly FieldElement a = ref this;
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
 			/* Given that p is congruent to 3 mod 4, we can compute the square root of
 			 *  a mod p as the (p+1)/4'th power of a.
 			 *
@@ -267,18 +266,18 @@ namespace NBitcoin.Secp256k1
 
 		public readonly FieldElementStorage ToStorage()
 		{
-			uint n0, n1, n2, n3, n4, n5, n6, n7;
+			Span<uint> n = stackalloc uint[FieldElementStorage.NCount];
 			ref readonly FieldElement a = ref this;
 			VERIFY_CHECK(a.normalized);
-			n0 = a.n0 | a.n1 << 26;
-			n1 = a.n1 >> 6 | a.n2 << 20;
-			n2 = a.n2 >> 12 | a.n3 << 14;
-			n3 = a.n3 >> 18 | a.n4 << 8;
-			n4 = a.n4 >> 24 | a.n5 << 2 | a.n6 << 28;
-			n5 = a.n6 >> 4 | a.n7 << 22;
-			n6 = a.n7 >> 10 | a.n8 << 16;
-			n7 = a.n8 >> 16 | a.n9 << 10;
-			return new FieldElementStorage(n0, n1, n2, n3, n4, n5, n6, n7);
+			n[0] = a.n0 | a.n1 << 26;
+			n[1] = a.n1 >> 6 | a.n2 << 20;
+			n[2] = a.n2 >> 12 | a.n3 << 14;
+			n[3] = a.n3 >> 18 | a.n4 << 8;
+			n[4] = a.n4 >> 24 | a.n5 << 2 | a.n6 << 28;
+			n[5] = a.n6 >> 4 | a.n7 << 22;
+			n[6] = a.n7 >> 10 | a.n8 << 16;
+			n[7] = a.n8 >> 16 | a.n9 << 10;
+			return new FieldElementStorage(n);
 		}
 
 		public readonly int CompareToVariable(in FieldElement b)
@@ -437,18 +436,11 @@ namespace NBitcoin.Secp256k1
 			return a * t1;
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Sqr()
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, _, _) = Zero;
-			int magnitude;
-			bool normalized;
 			VERIFY_CHECK(this.magnitude <= 8);
 			VERIFY();
-			secp256k1_fe_sqr_inner(ref n0, ref n1, ref n2, ref n3, ref n4, ref n5, ref n6, ref n7, ref n8, ref n9);
-			magnitude = 1;
-			normalized = false;
-			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var r = secp256k1_fe_sqr_inner(1, false);
 			r.VERIFY();
 			return r;
 		}
@@ -484,8 +476,9 @@ namespace NBitcoin.Secp256k1
 			r[0] = u;
 		}
 
-		private readonly void secp256k1_fe_sqr_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9)
+		private readonly FieldElement secp256k1_fe_sqr_inner(int magnitude, bool normalized)
 		{
+			Span<uint> n = stackalloc uint[NCount];
 			ulong c, d;
 			ulong u0, u1, u2, u3, u4, u5, u6, u7, u8;
 			uint t9, t0, t1, t2, t3, t4, t5, t6, t7;
@@ -703,32 +696,32 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(c <= 0x9000016FBFFFC2F8UL);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 t5 t4 t3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 
-			n3 = t3;
-			VERIFY_BITS(n3, 26);
+			n[3] = t3;
+			VERIFY_BITS(n[3], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 t5 t4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n4 = t4;
-			VERIFY_BITS(n4, 26);
+			n[4] = t4;
+			VERIFY_BITS(n[4], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 t5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n5 = t5;
-			VERIFY_BITS(n5, 26);
+			n[5] = t5;
+			VERIFY_BITS(n[5], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n6 = t6;
-			VERIFY_BITS(n6, 26);
+			n[6] = t6;
+			VERIFY_BITS(n[6], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n7 = t7;
-			VERIFY_BITS(n7, 26);
+			n[7] = t7;
+			VERIFY_BITS(n[7], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 
-			n8 = (uint)(c & M); c >>= 26; c += u8 * R1;
-			VERIFY_BITS(n8, 26);
+			n[8] = (uint)(c & M); c >>= 26; c += u8 * R1;
+			VERIFY_BITS(n[8], 26);
 			VERIFY_BITS(c, 39);
 			/* [d u8 0 0 0 0 0 0 0 0 t9+c-u8*R1 r8-u8*R0 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			/* [d 0 0 0 0 0 0 0 0 0 t9+c r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			c += d * R0 + t9;
 			VERIFY_BITS(c, 45);
 			/* [d 0 0 0 0 0 0 0 0 0 c-d*R0 r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n9 = (uint)(c & (M >> 4)); c >>= 22; c += d * (R1 << 4);
-			VERIFY_BITS(n9, 22);
+			n[9] = (uint)(c & (M >> 4)); c >>= 22; c += d * (R1 << 4);
+			VERIFY_BITS(n[9], 22);
 			VERIFY_BITS(c, 46);
 			/* [d 0 0 0 0 0 0 0 0 r9+((c-d*R1<<4)<<22)-d*R0 r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			/* [d 0 0 0 0 0 0 0 -d*R1 r9+(c<<22)-d*R0 r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
@@ -737,8 +730,8 @@ namespace NBitcoin.Secp256k1
 			d = c * (R0 >> 4) + t0;
 			VERIFY_BITS(d, 56);
 			/* [r9+(c<<22) r8 r7 r6 r5 r4 r3 t2 t1 d-c*R0>>4] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n0 = (uint)(d & M); d >>= 26;
-			VERIFY_BITS(n0, 26);
+			n[0] = (uint)(d & M); d >>= 26;
+			VERIFY_BITS(n[0], 26);
 			VERIFY_BITS(d, 30);
 			/* [r9+(c<<22) r8 r7 r6 r5 r4 r3 t2 t1+d r0-c*R0>>4] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			d += c * (R1 >> 4) + t1;
@@ -746,17 +739,18 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(d <= 0x10000003FFFFBFUL);
 			/* [r9+(c<<22) r8 r7 r6 r5 r4 r3 t2 d-c*R1>>4 r0-c*R0>>4] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			/* [r9 r8 r7 r6 r5 r4 r3 t2 d r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n1 = (uint)(d & M); d >>= 26;
-			VERIFY_BITS(n1, 26);
+			n[1] = (uint)(d & M); d >>= 26;
+			VERIFY_BITS(n[1], 26);
 			VERIFY_BITS(d, 27);
 			VERIFY_CHECK(d <= 0x4000000UL);
 			/* [r9 r8 r7 r6 r5 r4 r3 t2+d r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			d += t2;
 			VERIFY_BITS(d, 27);
 			/* [r9 r8 r7 r6 r5 r4 r3 d r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n2 = (uint)d;
-			VERIFY_BITS(n2, 27);
+			n[2] = (uint)d;
+			VERIFY_BITS(n[2], 27);
 			/* [r9 r8 r7 r6 r5 r4 r3 r2 r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
+			return new FieldElement(n, magnitude, normalized);
 		}
 
 		[Conditional("SECP256K1_VERIFY")]
@@ -764,41 +758,32 @@ namespace NBitcoin.Secp256k1
 		{
 			VERIFY_CHECK(((x) >> (n)) == 0);
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+
 		public readonly FieldElement Multiply(in FieldElement b)
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, _, _) = Zero;
-			int magnitude;
-			bool normalized;
 			VERIFY_CHECK(this.magnitude <= 8);
 			VERIFY();
 			VERIFY_CHECK(b.magnitude <= 8);
 			b.VERIFY();
-			secp256k1_fe_mul_inner(ref n0, ref n1, ref n2, ref n3, ref n4, ref n5, ref n6, ref n7, ref n8, ref n9, b);
-			magnitude = 1;
-			normalized = false;
-			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var r = secp256k1_fe_mul_inner(b, 1, false);
 			r.VERIFY();
 			return r;
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Multiply(uint a)
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
-			n0 *= a;
-			n1 *= a;
-			n2 *= a;
-			n3 *= a;
-			n4 *= a;
-			n5 *= a;
-			n6 *= a;
-			n7 *= a;
-			n8 *= a;
-			n9 *= a;
-			magnitude *= (int)a;
-			normalized = false;
-			var r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var r = new FieldElement(
+				n0 * a,
+				n1 * a,
+				n2 * a,
+				n3 * a,
+				n4 * a,
+				n5 * a,
+				n6 * a,
+				n7 * a,
+				n8 * a,
+				n9 * a,
+				magnitude * (int)a, false);
 			r.VERIFY();
 			return r;
 		}
@@ -822,11 +807,12 @@ namespace NBitcoin.Secp256k1
 			r.VERIFY();
 			return r;
 		}
-
-		[MethodImpl(MethodImplOptions.NoOptimization)]
-		private readonly void secp256k1_fe_mul_inner(ref uint n0, ref uint n1, ref uint n2, ref uint n3, ref uint n4, ref uint n5, ref uint n6, ref uint n7, ref uint n8, ref uint n9, in FieldElement b)
+		internal const int NCount = 10;
+		private readonly FieldElement secp256k1_fe_mul_inner(in FieldElement b, int magnitude, bool normalized)
 		{
+			
 			ref readonly FieldElement a = ref this;
+			Span<uint> n = stackalloc uint[NCount];
 			ulong c, d;
 			ulong u0, u1, u2, u3, u4, u5, u6, u7, u8;
 			uint t9, t1, t0, t2, t3, t4, t5, t6, t7;
@@ -1099,32 +1085,32 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(c <= 0x9000016FBFFFC2F8UL);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 t5 t4 t3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 
-			n3 = t3;
-			VERIFY_BITS(n3, 26);
+			n[3] = t3;
+			VERIFY_BITS(n[3], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 t5 t4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n4 = t4;
-			VERIFY_BITS(n4, 26);
+			n[4] = t4;
+			VERIFY_BITS(n[4], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 t5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n5 = t5;
-			VERIFY_BITS(n5, 26);
+			n[5] = t5;
+			VERIFY_BITS(n[5], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 t6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n6 = t6;
-			VERIFY_BITS(n6, 26);
+			n[6] = t6;
+			VERIFY_BITS(n[6], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 t7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n7 = t7;
-			VERIFY_BITS(n7, 26);
+			n[7] = t7;
+			VERIFY_BITS(n[7], 26);
 			/* [d u8 0 0 0 0 0 0 0 0 t9 c-u8*R0 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 
-			n8 = (uint)(c & M); c >>= 26; c += u8 * R1;
-			VERIFY_BITS(n8, 26);
+			n[8] = (uint)(c & M); c >>= 26; c += u8 * R1;
+			VERIFY_BITS(n[8], 26);
 			VERIFY_BITS(c, 39);
 			/* [d u8 0 0 0 0 0 0 0 0 t9+c-u8*R1 r8-u8*R0 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			/* [d 0 0 0 0 0 0 0 0 0 t9+c r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			c += d * R0 + t9;
 			VERIFY_BITS(c, 45);
 			/* [d 0 0 0 0 0 0 0 0 0 c-d*R0 r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n9 = (uint)(c & (M >> 4)); c >>= 22; c += d * (R1 << 4);
-			VERIFY_BITS(n9, 22);
+			n[9] = (uint)(c & (M >> 4)); c >>= 22; c += d * (R1 << 4);
+			VERIFY_BITS(n[9], 22);
 			VERIFY_BITS(c, 46);
 			/* [d 0 0 0 0 0 0 0 0 r9+((c-d*R1<<4)<<22)-d*R0 r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			/* [d 0 0 0 0 0 0 0 -d*R1 r9+(c<<22)-d*R0 r8 r7 r6 r5 r4 r3 t2 t1 t0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
@@ -1133,8 +1119,8 @@ namespace NBitcoin.Secp256k1
 			d = c * (R0 >> 4) + t0;
 			VERIFY_BITS(d, 56);
 			/* [r9+(c<<22) r8 r7 r6 r5 r4 r3 t2 t1 d-c*R0>>4] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n0 = (uint)(d & M); d >>= 26;
-			VERIFY_BITS(n0, 26);
+			n[0] = (uint)(d & M); d >>= 26;
+			VERIFY_BITS(n[0], 26);
 			VERIFY_BITS(d, 30);
 			/* [r9+(c<<22) r8 r7 r6 r5 r4 r3 t2 t1+d r0-c*R0>>4] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			d += c * (R1 >> 4) + t1;
@@ -1142,68 +1128,73 @@ namespace NBitcoin.Secp256k1
 			VERIFY_CHECK(d <= 0x10000003FFFFBFUL);
 			/* [r9+(c<<22) r8 r7 r6 r5 r4 r3 t2 d-c*R1>>4 r0-c*R0>>4] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			/* [r9 r8 r7 r6 r5 r4 r3 t2 d r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n1 = (uint)(d & M); d >>= 26;
-			VERIFY_BITS(n1, 26);
+			n[1] = (uint)(d & M); d >>= 26;
+			VERIFY_BITS(n[1], 26);
 			VERIFY_BITS(d, 27);
 			VERIFY_CHECK(d <= 0x4000000UL);
 			/* [r9 r8 r7 r6 r5 r4 r3 t2+d r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			d += t2;
 			VERIFY_BITS(d, 27);
 			/* [r9 r8 r7 r6 r5 r4 r3 d r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
-			n2 = (uint)d;
-			VERIFY_BITS(n2, 27);
+			n[2] = (uint)d;
+			VERIFY_BITS(n[2], 27);
 			/* [r9 r8 r7 r6 r5 r4 r3 r2 r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
+			return new FieldElement(n, magnitude, normalized);
 		}
 
 		public static bool TryCreate(ReadOnlySpan<byte> bytes, out FieldElement field)
 		{
-			uint n0, n1, n2, n3, n4, n5, n6, n7, n8, n9;
+			Span<uint> n = stackalloc uint[NCount];
 			int magnitude;
 			bool normalized;
-			n0 = (uint)bytes[31] | ((uint)bytes[30] << 8) | ((uint)bytes[29] << 16) | ((uint)(bytes[28] & 0x3) << 24);
-			n1 = (uint)((bytes[28] >> 2) & 0x3f) | ((uint)bytes[27] << 6) | ((uint)bytes[26] << 14) | ((uint)(bytes[25] & 0xf) << 22);
-			n2 = (uint)((bytes[25] >> 4) & 0xf) | ((uint)bytes[24] << 4) | ((uint)bytes[23] << 12) | ((uint)(bytes[22] & 0x3f) << 20);
-			n3 = (uint)((bytes[22] >> 6) & 0x3) | ((uint)bytes[21] << 2) | ((uint)bytes[20] << 10) | ((uint)bytes[19] << 18);
-			n4 = (uint)bytes[18] | ((uint)bytes[17] << 8) | ((uint)bytes[16] << 16) | ((uint)(bytes[15] & 0x3) << 24);
-			n5 = (uint)((bytes[15] >> 2) & 0x3f) | ((uint)bytes[14] << 6) | ((uint)bytes[13] << 14) | ((uint)(bytes[12] & 0xf) << 22);
-			n6 = (uint)((bytes[12] >> 4) & 0xf) | ((uint)bytes[11] << 4) | ((uint)bytes[10] << 12) | ((uint)(bytes[9] & 0x3f) << 20);
-			n7 = (uint)((bytes[9] >> 6) & 0x3) | ((uint)bytes[8] << 2) | ((uint)bytes[7] << 10) | ((uint)bytes[6] << 18);
-			n8 = (uint)bytes[5] | ((uint)bytes[4] << 8) | ((uint)bytes[3] << 16) | ((uint)(bytes[2] & 0x3) << 24);
-			n9 = (uint)((bytes[2] >> 2) & 0x3f) | ((uint)bytes[1] << 6) | ((uint)bytes[0] << 14);
-			if (n9 == 0x3FFFFFUL && (n8 & n7 & n6 & n5 & n4 & n3 & n2) == 0x3FFFFFFUL && (n1 + 0x40UL + ((n0 + 0x3D1UL) >> 26)) > 0x3FFFFFFUL)
+			n[0] = (uint)bytes[31] | ((uint)bytes[30] << 8) | ((uint)bytes[29] << 16) | ((uint)(bytes[28] & 0x3) << 24);
+			n[1] = (uint)((bytes[28] >> 2) & 0x3f) | ((uint)bytes[27] << 6) | ((uint)bytes[26] << 14) | ((uint)(bytes[25] & 0xf) << 22);
+			n[2] = (uint)((bytes[25] >> 4) & 0xf) | ((uint)bytes[24] << 4) | ((uint)bytes[23] << 12) | ((uint)(bytes[22] & 0x3f) << 20);
+			n[3] = (uint)((bytes[22] >> 6) & 0x3) | ((uint)bytes[21] << 2) | ((uint)bytes[20] << 10) | ((uint)bytes[19] << 18);
+			n[4] = (uint)bytes[18] | ((uint)bytes[17] << 8) | ((uint)bytes[16] << 16) | ((uint)(bytes[15] & 0x3) << 24);
+			n[5] = (uint)((bytes[15] >> 2) & 0x3f) | ((uint)bytes[14] << 6) | ((uint)bytes[13] << 14) | ((uint)(bytes[12] & 0xf) << 22);
+			n[6] = (uint)((bytes[12] >> 4) & 0xf) | ((uint)bytes[11] << 4) | ((uint)bytes[10] << 12) | ((uint)(bytes[9] & 0x3f) << 20);
+			n[7] = (uint)((bytes[9] >> 6) & 0x3) | ((uint)bytes[8] << 2) | ((uint)bytes[7] << 10) | ((uint)bytes[6] << 18);
+			n[8] = (uint)bytes[5] | ((uint)bytes[4] << 8) | ((uint)bytes[3] << 16) | ((uint)(bytes[2] & 0x3) << 24);
+			n[9] = (uint)((bytes[2] >> 2) & 0x3f) | ((uint)bytes[1] << 6) | ((uint)bytes[0] << 14);
+			if (n[9] == 0x3FFFFFUL && (n[8] & n[7] & n[6] & n[5] & n[4] & n[3] & n[2]) == 0x3FFFFFFUL && (n[1] + 0x40UL + ((n[0] + 0x3D1UL) >> 26)) > 0x3FFFFFFUL)
 			{
 				field = default;
 				return false;
 			}
 			magnitude = 1;
 			normalized = true;
-			field = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			field = new FieldElement(n, magnitude, normalized);
 			return true;
 		}
 
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public static void CMov(ref FieldElement r, FieldElement a, int flag)
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = r;
+			Span<uint> n = stackalloc uint[NCount];
+			int magnitude;
+			bool normalized;
+			r.Deconstruct(ref n, out magnitude, out normalized);
+
 			uint mask0, mask1;
 			mask0 = (uint)flag + ~((uint)0);
 			mask1 = ~mask0;
-			n0 = (n0 & mask0) | (a.n0 & mask1);
-			n1 = (n1 & mask0) | (a.n1 & mask1);
-			n2 = (n2 & mask0) | (a.n2 & mask1);
-			n3 = (n3 & mask0) | (a.n3 & mask1);
-			n4 = (n4 & mask0) | (a.n4 & mask1);
-			n5 = (n5 & mask0) | (a.n5 & mask1);
-			n6 = (n6 & mask0) | (a.n6 & mask1);
-			n7 = (n7 & mask0) | (a.n7 & mask1);
-			n8 = (n8 & mask0) | (a.n8 & mask1);
-			n9 = (n9 & mask0) | (a.n9 & mask1);
+			n[0] = (n[0] & mask0) | (a.n0 & mask1);
+			n[1] = (n[1] & mask0) | (a.n1 & mask1);
+			n[2] = (n[2] & mask0) | (a.n2 & mask1);
+			n[3] = (n[3] & mask0) | (a.n3 & mask1);
+			n[4] = (n[4] & mask0) | (a.n4 & mask1);
+			n[5] = (n[5] & mask0) | (a.n5 & mask1);
+			n[6] = (n[6] & mask0) | (a.n6 & mask1);
+			n[7] = (n[7] & mask0) | (a.n7 & mask1);
+			n[8] = (n[8] & mask0) | (a.n8 & mask1);
+			n[9] = (n[9] & mask0) | (a.n9 & mask1);
 			if (a.magnitude > magnitude)
 			{
 				magnitude = a.magnitude;
 			}
 			normalized &= a.normalized;
-			r = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			r = new FieldElement(n, magnitude, normalized);
 		}
 
 		public FieldElement(uint n0, uint n1, uint n2, uint n3, uint n4, uint n5, uint n6, uint n7, uint n8, uint n9, int magnitude, bool normalized)
@@ -1222,31 +1213,38 @@ namespace NBitcoin.Secp256k1
 			this.normalized = normalized;
 		}
 
+		public FieldElement(ReadOnlySpan<uint> n, int magnitude, bool normalized) : this()
+		{
+			this.n0 = n[0];
+			this.n1 = n[1];
+			this.n2 = n[2];
+			this.n3 = n[3];
+			this.n4 = n[4];
+			this.n5 = n[5];
+			this.n6 = n[6];
+			this.n7 = n[7];
+			this.n8 = n[8];
+			this.n9 = n[9];
+			this.magnitude = magnitude;
+			this.normalized = normalized;
+		}
+
 		public readonly void Deconstruct(
-			out uint n0,
-			out uint n1,
-			out uint n2,
-			out uint n3,
-			out uint n4,
-			out uint n5,
-			out uint n6,
-			out uint n7,
-			out uint n8,
-			out uint n9,
+			ref Span<uint> n,
 			out int magnitude,
 			out bool normalized
 			)
 		{
-			n0 = this.n0;
-			n1 = this.n1;
-			n2 = this.n2;
-			n3 = this.n3;
-			n4 = this.n4;
-			n5 = this.n5;
-			n6 = this.n6;
-			n7 = this.n7;
-			n8 = this.n8;
-			n9 = this.n9;
+			n[0] = this.n0;
+			n[1] = this.n1;
+			n[2] = this.n2;
+			n[3] = this.n3;
+			n[4] = this.n4;
+			n[5] = this.n5;
+			n[6] = this.n6;
+			n[7] = this.n7;
+			n[8] = this.n8;
+			n[9] = this.n9;
 			magnitude = this.magnitude;
 			normalized = this.normalized;
 		}
@@ -1282,26 +1280,23 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Negate(int m)
 		{
-			ref readonly FieldElement a = ref this;
 			VERIFY_CHECK(this.magnitude <= m);
 			VERIFY();
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
-			n0 = (uint)(0x3FFFC2FUL * 2 * (uint)(m + 1) - a.n0);
-			n1 = (uint)(0x3FFFFBFUL * 2 * (uint)(m + 1) - a.n1);
-			n2 = (uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - a.n2);
-			n3 = (uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - a.n3);
-			n4 = (uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - a.n4);
-			n5 = (uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - a.n5);
-			n6 = (uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - a.n6);
-			n7 = (uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - a.n7);
-			n8 = (uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - a.n8);
-			n9 = (uint)(0x03FFFFFUL * 2 * (uint)(m + 1) - a.n9);
-			magnitude = m + 1;
-			normalized = false;
-			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var result = new FieldElement(
+				(uint)(0x3FFFC2FUL * 2 * (uint)(m + 1) - n0),
+				(uint)(0x3FFFFBFUL * 2 * (uint)(m + 1) - n1),
+				(uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - n2),
+				(uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - n3),
+				(uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - n4),
+				(uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - n5),
+				(uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - n6),
+				(uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - n7),
+				(uint)(0x3FFFFFFUL * 2 * (uint)(m + 1) - n8),
+				(uint)(0x03FFFFFUL * 2 * (uint)(m + 1) - n9),
+				m + 1, false
+				);
 			result.VERIFY();
 			return result;
 		}
@@ -1309,32 +1304,30 @@ namespace NBitcoin.Secp256k1
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement NormalizeWeak()
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
-			uint t0 = n0, t1 = n1, t2 = n2, t3 = n3, t4 = n4,
-			t5 = n5, t6 = n6, t7 = n7, t8 = n8, t9 = n9;
+			Span<uint> t = stackalloc uint[NCount];
+			int magnitude;
+			bool normalized;
+			this.Deconstruct(ref t, out magnitude, out normalized);
 
 			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
-			uint x = t9 >> 22; t9 &= 0x03FFFFFU;
+			uint x = t[9] >> 22; t[9] &= 0x03FFFFFU;
 
 			/* The first pass ensures the magnitude is 1, ... */
-			t0 += x * 0x3D1U; t1 += (x << 6);
-			t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
-			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
-			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU;
-			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU;
-			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU;
-			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU;
-			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU;
-			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU;
-			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU;
+			t[0] += x * 0x3D1U; t[1] += (x << 6);
+			t[1] += (t[0] >> 26); t[0] &= 0x3FFFFFFU;
+			t[2] += (t[1] >> 26); t[1] &= 0x3FFFFFFU;
+			t[3] += (t[2] >> 26); t[2] &= 0x3FFFFFFU;
+			t[4] += (t[3] >> 26); t[3] &= 0x3FFFFFFU;
+			t[5] += (t[4] >> 26); t[4] &= 0x3FFFFFFU;
+			t[6] += (t[5] >> 26); t[5] &= 0x3FFFFFFU;
+			t[7] += (t[6] >> 26); t[6] &= 0x3FFFFFFU;
+			t[8] += (t[7] >> 26); t[7] &= 0x3FFFFFFU;
+			t[9] += (t[8] >> 26); t[8] &= 0x3FFFFFFU;
 
 			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
-			VERIFY_CHECK(t9 >> 23 == 0);
-
-			n0 = t0; n1 = t1; n2 = t2; n3 = t3; n4 = t4;
-			n5 = t5; n6 = t6; n7 = t7; n8 = t8; n9 = t9;
+			VERIFY_CHECK(t[9] >> 23 == 0);
 			magnitude = 1;
-			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var result = new FieldElement(t, magnitude, normalized);
 			result.VERIFY();
 			return result;
 		}
@@ -1346,59 +1339,57 @@ namespace NBitcoin.Secp256k1
 
 		public readonly FieldElement NormalizeVariable()
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
-			uint t0 = n0, t1 = n1, t2 = n2, t3 = n3, t4 = n4,
-			t5 = n5, t6 = n6, t7 = n7, t8 = n8, t9 = n9;
+			Span<uint> t = stackalloc uint[NCount];
+			int magnitude;
+			bool normalized;
+			this.Deconstruct(ref t, out magnitude, out normalized);
 
 			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
 			uint m;
-			uint x = t9 >> 22; t9 &= 0x03FFFFFU;
+			uint x = t[9] >> 22; t[9] &= 0x03FFFFFU;
 
 			/* The first pass ensures the magnitude is 1, ... */
-			t0 += x * 0x3D1U; t1 += (x << 6);
-			t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
-			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
-			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU; m = t2;
-			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU; m &= t3;
-			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU; m &= t4;
-			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU; m &= t5;
-			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU; m &= t6;
-			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU; m &= t7;
-			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU; m &= t8;
+			t[0] += x * 0x3D1U; t[1] += (x << 6);
+			t[1] += (t[0] >> 26); t[0] &= 0x3FFFFFFU;
+			t[2] += (t[1] >> 26); t[1] &= 0x3FFFFFFU;
+			t[3] += (t[2] >> 26); t[2] &= 0x3FFFFFFU; m = t[2];
+			t[4] += (t[3] >> 26); t[3] &= 0x3FFFFFFU; m &= t[3];
+			t[5] += (t[4] >> 26); t[4] &= 0x3FFFFFFU; m &= t[4];
+			t[6] += (t[5] >> 26); t[5] &= 0x3FFFFFFU; m &= t[5];
+			t[7] += (t[6] >> 26); t[6] &= 0x3FFFFFFU; m &= t[6];
+			t[8] += (t[7] >> 26); t[7] &= 0x3FFFFFFU; m &= t[7];
+			t[9] += (t[8] >> 26); t[8] &= 0x3FFFFFFU; m &= t[8];
 
 			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
-			VERIFY_CHECK(t9 >> 23 == 0);
+			VERIFY_CHECK(t[9] >> 23 == 0);
 
 			/* At most a single final reduction is needed; check if the value is >= the field characteristic */
-			x = (t9 >> 22) | ((t9 == 0x03FFFFFU ? 1U : 0) & (m == 0x3FFFFFFU ? 1U : 0)
-				& ((t1 + 0x40U + ((t0 + 0x3D1U) >> 26)) > 0x3FFFFFFU ? 1U : 0));
+			x = (t[9] >> 22) | ((t[9] == 0x03FFFFFU ? 1U : 0) & (m == 0x3FFFFFFU ? 1U : 0)
+				& ((t[1] + 0x40U + ((t[0] + 0x3D1U) >> 26)) > 0x3FFFFFFU ? 1U : 0));
 
 			if (x != 0)
 			{
-				t0 += 0x3D1U; t1 += (x << 6);
-				t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
-				t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
-				t3 += (t2 >> 26); t2 &= 0x3FFFFFFU;
-				t4 += (t3 >> 26); t3 &= 0x3FFFFFFU;
-				t5 += (t4 >> 26); t4 &= 0x3FFFFFFU;
-				t6 += (t5 >> 26); t5 &= 0x3FFFFFFU;
-				t7 += (t6 >> 26); t6 &= 0x3FFFFFFU;
-				t8 += (t7 >> 26); t7 &= 0x3FFFFFFU;
-				t9 += (t8 >> 26); t8 &= 0x3FFFFFFU;
+				t[0] += 0x3D1U; t[1] += (x << 6);
+				t[1] += (t[0] >> 26); t[0] &= 0x3FFFFFFU;
+				t[2] += (t[1] >> 26); t[1] &= 0x3FFFFFFU;
+				t[3] += (t[2] >> 26); t[2] &= 0x3FFFFFFU;
+				t[4] += (t[3] >> 26); t[3] &= 0x3FFFFFFU;
+				t[5] += (t[4] >> 26); t[4] &= 0x3FFFFFFU;
+				t[6] += (t[5] >> 26); t[5] &= 0x3FFFFFFU;
+				t[7] += (t[6] >> 26); t[6] &= 0x3FFFFFFU;
+				t[8] += (t[7] >> 26); t[7] &= 0x3FFFFFFU;
+				t[9] += (t[8] >> 26); t[8] &= 0x3FFFFFFU;
 
 				/* If t9 didn't carry to bit 22 already, then it should have after any final reduction */
-				VERIFY_CHECK(t9 >> 22 == x);
+				VERIFY_CHECK(t[9] >> 22 == x);
 
 				/* Mask off the possible multiple of 2^256 from the final reduction */
-				t9 &= 0x03FFFFFU;
+				t[9] &= 0x03FFFFFU;
 			}
-
-			n0 = t0; n1 = t1; n2 = t2; n3 = t3; n4 = t4;
-			n5 = t5; n6 = t6; n7 = t7; n8 = t8; n9 = t9;
 
 			magnitude = 1;
 			normalized = true;
-			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var result = new FieldElement(t, magnitude, normalized);
 			result.VERIFY();
 			return result;
 		}
@@ -1406,57 +1397,55 @@ namespace NBitcoin.Secp256k1
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly FieldElement Normalize()
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized) = this;
-
-			uint t0 = n0, t1 = n1, t2 = n2, t3 = n3, t4 = n4,
-			 t5 = n5, t6 = n6, t7 = n7, t8 = n8, t9 = n9;
+			Span<uint> t = stackalloc uint[NCount];
+			int magnitude;
+			bool normalized;
+			this.Deconstruct(ref t, out magnitude, out normalized);
 
 			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
 			uint m;
-			uint x = t9 >> 22; t9 &= 0x03FFFFFU;
+			uint x = t[9] >> 22; t[9] &= 0x03FFFFFU;
 
 			/* The first pass ensures the magnitude is 1, ... */
-			t0 += x * 0x3D1U; t1 += (x << 6);
-			t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
-			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
-			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU; m = t2;
-			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU; m &= t3;
-			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU; m &= t4;
-			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU; m &= t5;
-			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU; m &= t6;
-			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU; m &= t7;
-			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU; m &= t8;
+			t[0] += x * 0x3D1U; t[1] += (x << 6);
+			t[1] += (t[0] >> 26); t[0] &= 0x3FFFFFFU;
+			t[2] += (t[1] >> 26); t[1] &= 0x3FFFFFFU;
+			t[3] += (t[2] >> 26); t[2] &= 0x3FFFFFFU; m = t[2];
+			t[4] += (t[3] >> 26); t[3] &= 0x3FFFFFFU; m &= t[3];
+			t[5] += (t[4] >> 26); t[4] &= 0x3FFFFFFU; m &= t[4];
+			t[6] += (t[5] >> 26); t[5] &= 0x3FFFFFFU; m &= t[5];
+			t[7] += (t[6] >> 26); t[6] &= 0x3FFFFFFU; m &= t[6];
+			t[8] += (t[7] >> 26); t[7] &= 0x3FFFFFFU; m &= t[7];
+			t[9] += (t[8] >> 26); t[8] &= 0x3FFFFFFU; m &= t[8];
 
-			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
-			VERIFY_CHECK(t9 >> 23 == 0);
+			/* ... except for a possible carry at bit 22 of t[9] (i.e. bit 256 of the field element) */
+			VERIFY_CHECK(t[9] >> 23 == 0);
 
 			/* At most a single final reduction is needed; check if the value is >= the field characteristic */
-			x = (t9 >> 22) | ((t9 == 0x03FFFFFU ? 1u : 0) & (m == 0x3FFFFFFU ? 1u : 0)
-				& ((t1 + 0x40U + ((t0 + 0x3D1U) >> 26)) > 0x3FFFFFFU ? 1u : 0));
+			x = (t[9] >> 22) | ((t[9] == 0x03FFFFFU ? 1u : 0) & (m == 0x3FFFFFFU ? 1u : 0)
+				& ((t[1] + 0x40U + ((t[0] + 0x3D1U) >> 26)) > 0x3FFFFFFU ? 1u : 0));
 
 			/* Apply the final reduction (for constant-time behaviour, we do it always) */
-			t0 += x * 0x3D1U; t1 += (x << 6);
-			t1 += (t0 >> 26); t0 &= 0x3FFFFFFU;
-			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU;
-			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU;
-			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU;
-			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU;
-			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU;
-			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU;
-			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU;
-			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU;
+			t[0] += x * 0x3D1U; t[1] += (x << 6);
+			t[1] += (t[0] >> 26); t[0] &= 0x3FFFFFFU;
+			t[2] += (t[1] >> 26); t[1] &= 0x3FFFFFFU;
+			t[3] += (t[2] >> 26); t[2] &= 0x3FFFFFFU;
+			t[4] += (t[3] >> 26); t[3] &= 0x3FFFFFFU;
+			t[5] += (t[4] >> 26); t[4] &= 0x3FFFFFFU;
+			t[6] += (t[5] >> 26); t[5] &= 0x3FFFFFFU;
+			t[7] += (t[6] >> 26); t[6] &= 0x3FFFFFFU;
+			t[8] += (t[7] >> 26); t[7] &= 0x3FFFFFFU;
+			t[9] += (t[8] >> 26); t[8] &= 0x3FFFFFFU;
 
-			/* If t9 didn't carry to bit 22 already, then it should have after any final reduction */
-			VERIFY_CHECK(t9 >> 22 == x);
+			/* If t[9] didn't carry to bit 22 already, then it should have after any final reduction */
+			VERIFY_CHECK(t[9] >> 22 == x);
 
 			/* Mask off the possible multiple of 2^256 from the final reduction */
-			t9 &= 0x03FFFFFU;
+			t[9] &= 0x03FFFFFU;
 
-			n0 = t0; n1 = t1; n2 = t2; n3 = t3; n4 = t4;
-			n5 = t5; n6 = t6; n7 = t7; n8 = t8; n9 = t9;
 			magnitude = 1;
 			normalized = true;
-			var result = new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			var result = new FieldElement(t, magnitude, normalized);
 			result.VERIFY();
 			return result;
 		}
@@ -1552,33 +1541,32 @@ namespace NBitcoin.Secp256k1
 			return na.NormalizesToZero();
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly bool NormalizesToZero()
 		{
-			uint t0 = n0, t1 = n1, t2 = n2, t3 = n3, t4 = n4,
-		 t5 = n5, t6 = n6, t7 = n7, t8 = n8, t9 = n9;
+			Span<uint> t = stackalloc uint[NCount];
+			this.Deconstruct(ref t, out _, out _);
 
 			/* z0 tracks a possible raw value of 0, z1 tracks a possible raw value of P */
 			uint z0, z1;
 
-			/* Reduce t9 at the start so there will be at most a single carry from the first pass */
-			uint x = t9 >> 22; t9 &= 0x03FFFFFU;
+			/* Reduce t[9] at the start so there will be at most a single carry from the first pass */
+			uint x = t[9] >> 22; t[9] &= 0x03FFFFFU;
 
 			/* The first pass ensures the magnitude is 1, ... */
-			t0 += x * 0x3D1U; t1 += (x << 6);
-			t1 += (t0 >> 26); t0 &= 0x3FFFFFFU; z0 = t0; z1 = t0 ^ 0x3D0U;
-			t2 += (t1 >> 26); t1 &= 0x3FFFFFFU; z0 |= t1; z1 &= t1 ^ 0x40U;
-			t3 += (t2 >> 26); t2 &= 0x3FFFFFFU; z0 |= t2; z1 &= t2;
-			t4 += (t3 >> 26); t3 &= 0x3FFFFFFU; z0 |= t3; z1 &= t3;
-			t5 += (t4 >> 26); t4 &= 0x3FFFFFFU; z0 |= t4; z1 &= t4;
-			t6 += (t5 >> 26); t5 &= 0x3FFFFFFU; z0 |= t5; z1 &= t5;
-			t7 += (t6 >> 26); t6 &= 0x3FFFFFFU; z0 |= t6; z1 &= t6;
-			t8 += (t7 >> 26); t7 &= 0x3FFFFFFU; z0 |= t7; z1 &= t7;
-			t9 += (t8 >> 26); t8 &= 0x3FFFFFFU; z0 |= t8; z1 &= t8;
-			z0 |= t9; z1 &= t9 ^ 0x3C00000U;
+			t[0] += x * 0x3D1U; t[1] += (x << 6);
+			t[1] += (t[0] >> 26); t[0] &= 0x3FFFFFFU; z0 = t[0]; z1 = t[0] ^ 0x3D0U;
+			t[2] += (t[1] >> 26); t[1] &= 0x3FFFFFFU; z0 |= t[1]; z1 &= t[1] ^ 0x40U;
+			t[3] += (t[2] >> 26); t[2] &= 0x3FFFFFFU; z0 |= t[2]; z1 &= t[2];
+			t[4] += (t[3] >> 26); t[3] &= 0x3FFFFFFU; z0 |= t[3]; z1 &= t[3];
+			t[5] += (t[4] >> 26); t[4] &= 0x3FFFFFFU; z0 |= t[4]; z1 &= t[4];
+			t[6] += (t[5] >> 26); t[5] &= 0x3FFFFFFU; z0 |= t[5]; z1 &= t[5];
+			t[7] += (t[6] >> 26); t[6] &= 0x3FFFFFFU; z0 |= t[6]; z1 &= t[6];
+			t[8] += (t[7] >> 26); t[7] &= 0x3FFFFFFU; z0 |= t[7]; z1 &= t[7];
+			t[9] += (t[8] >> 26); t[8] &= 0x3FFFFFFU; z0 |= t[8]; z1 &= t[8];
+			z0 |= t[9]; z1 &= t[9] ^ 0x3C00000U;
 
-			/* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
-			VERIFY_CHECK(t9 >> 23 == 0);
+			/* ... except for a possible carry at bit 22 of t[9] (i.e. bit 256 of the field element) */
+			VERIFY_CHECK(t[9] >> 23 == 0);
 
 			return ((z0 == 0 ? 1 : 0) | (z1 == 0x3FFFFFFU ? 1 : 0)) != 0;
 		}
@@ -1591,17 +1579,14 @@ namespace NBitcoin.Secp256k1
 		{
 			return !a.Equals(b);
 		}
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static FieldElement operator *(in FieldElement a, in FieldElement b)
 		{
 			return a.Multiply(b);
 		}
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static FieldElement operator *(in FieldElement a, in uint b)
 		{
 			return a.Multiply(b);
 		}
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static FieldElement operator +(in FieldElement a, in FieldElement b)
 		{
 			return a.Add(b);

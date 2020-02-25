@@ -545,7 +545,12 @@ namespace NBitcoin.Tests
 			GroupElement point;
 			negone = one.Negate();
 
-			point = random_group_element_test();
+			//point = random_group_element_test();
+			FieldElement pointx = new FieldElement(0x0317018C, 0x0288AE65, 0x036675A5, 0x02F953F1, 0x032BBF89, 0x018634AF, 0x025D89A8, 0x01A5D73D, 0x03EB429E, 0x000F1C67, 1, true);
+			FieldElement pointy = new FieldElement(0x003956B3, 0x01E3AB45, 0x03E26A99, 0x0122353E, 0x01D34895, 0x03C3943F, 0x00BEE690, 0x01E2CFF8, 0x01F7E771, 0x00293A0B, 1, true);
+			point = new GroupElement(pointx, pointy, false);
+
+
 			res1 = point.ECMultiplyConst(zero, 3);
 			res2 = res1.ToGroupElement();
 			Assert.True(res2.IsInfinity);
@@ -998,10 +1003,6 @@ namespace NBitcoin.Tests
 		{
 			FieldElement z2s;
 			FieldElement u1, u2, s1, s2;
-			if (a.infinity != b.infinity)
-			{
-
-			}
 			Assert.True(a.infinity == b.infinity);
 			if (a.infinity)
 			{

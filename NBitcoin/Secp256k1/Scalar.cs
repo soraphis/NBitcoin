@@ -296,154 +296,445 @@ namespace NBitcoin.Secp256k1
 			return 2 * (mask == 0 ? 1 : 0) - 1;
 		}
 
-		private static void mul_512(Span<uint> l, in Scalar a, in Scalar b)
+		private static void mul_512(Span<uint> zz, in Scalar x, in Scalar b)
 		{
-			/* 96 bit accumulator. */
-			uint c0 = 0, c1 = 0, c2 = 0;
+			ulong y_0 = b.d0;
+			ulong y_1 = b.d1;
+			ulong y_2 = b.d2;
+			ulong y_3 = b.d3;
+			ulong y_4 = b.d4;
+			ulong y_5 = b.d5;
+			ulong y_6 = b.d6;
+			ulong y_7 = b.d7;
 
-			/* l[0..15] = a[0..7] * b[0..7]. */
-			muladd_fast(ref c0, ref c1, ref c2, a.d0, b.d0);
-			extract_fast(ref c0, ref c1, ref c2, out l[0]);
-			muladd(ref c0, ref c1, ref c2, a.d0, b.d1);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d0);
-			extract(ref c0, ref c1, ref c2, out l[1]);
-			muladd(ref c0, ref c1, ref c2, a.d0, b.d2);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d1);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d0);
-			extract(ref c0, ref c1, ref c2, out l[2]);
-			muladd(ref c0, ref c1, ref c2, a.d0, b.d3);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d2);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d1);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d0);
-			extract(ref c0, ref c1, ref c2, out l[3]);
-			muladd(ref c0, ref c1, ref c2, a.d0, b.d4);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d3);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d2);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d1);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d0);
-			extract(ref c0, ref c1, ref c2, out l[4]);
-			muladd(ref c0, ref c1, ref c2, a.d0, b.d5);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d4);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d3);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d2);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d1);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d0);
-			extract(ref c0, ref c1, ref c2, out l[5]);
-			muladd(ref c0, ref c1, ref c2, a.d0, b.d6);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d5);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d4);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d3);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d2);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d1);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d0);
-			extract(ref c0, ref c1, ref c2, out l[6]);
-			muladd(ref c0, ref c1, ref c2, a.d0, b.d7);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d6);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d5);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d4);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d3);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d2);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d1);
-			muladd(ref c0, ref c1, ref c2, a.d7, b.d0);
-			extract(ref c0, ref c1, ref c2, out l[7]);
-			muladd(ref c0, ref c1, ref c2, a.d1, b.d7);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d6);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d5);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d4);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d3);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d2);
-			muladd(ref c0, ref c1, ref c2, a.d7, b.d1);
-			extract(ref c0, ref c1, ref c2, out l[8]);
-			muladd(ref c0, ref c1, ref c2, a.d2, b.d7);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d6);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d5);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d4);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d3);
-			muladd(ref c0, ref c1, ref c2, a.d7, b.d2);
-			extract(ref c0, ref c1, ref c2, out l[9]);
-			muladd(ref c0, ref c1, ref c2, a.d3, b.d7);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d6);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d5);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d4);
-			muladd(ref c0, ref c1, ref c2, a.d7, b.d3);
-			extract(ref c0, ref c1, ref c2, out l[10]);
-			muladd(ref c0, ref c1, ref c2, a.d4, b.d7);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d6);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d5);
-			muladd(ref c0, ref c1, ref c2, a.d7, b.d4);
-			extract(ref c0, ref c1, ref c2, out l[11]);
-			muladd(ref c0, ref c1, ref c2, a.d5, b.d7);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d6);
-			muladd(ref c0, ref c1, ref c2, a.d7, b.d5);
-			extract(ref c0, ref c1, ref c2, out l[12]);
-			muladd(ref c0, ref c1, ref c2, a.d6, b.d7);
-			muladd(ref c0, ref c1, ref c2, a.d7, b.d6);
-			extract(ref c0, ref c1, ref c2, out l[13]);
-			muladd_fast(ref c0, ref c1, ref c2, a.d7, b.d7);
-			extract_fast(ref c0, ref c1, ref c2, out l[14]);
-			VERIFY_CHECK(c1 == 0);
-			l[15] = c0;
+			{
+				ulong c = 0, x_0 = x.d0;
+				c += x_0 * y_0;
+				zz[0] = (uint)c;
+				c >>= 32;
+				c += x_0 * y_1;
+				zz[1] = (uint)c;
+				c >>= 32;
+				c += x_0 * y_2;
+				zz[2] = (uint)c;
+				c >>= 32;
+				c += x_0 * y_3;
+				zz[3] = (uint)c;
+				c >>= 32;
+				c += x_0 * y_4;
+				zz[4] = (uint)c;
+				c >>= 32;
+				c += x_0 * y_5;
+				zz[5] = (uint)c;
+				c >>= 32;
+				c += x_0 * y_6;
+				zz[6] = (uint)c;
+				c >>= 32;
+				c += x_0 * y_7;
+				zz[7] = (uint)c;
+				c >>= 32;
+				zz[8] = (uint)c;
+			}
+
+			{
+				int i = 1;
+				ulong c = 0, x_i = x.d1;
+				c += x_i * y_0 + zz[i + 0];
+				zz[i + 0] = (uint)c;
+				c >>= 32;
+				c += x_i * y_1 + zz[i + 1];
+				zz[i + 1] = (uint)c;
+				c >>= 32;
+				c += x_i * y_2 + zz[i + 2];
+				zz[i + 2] = (uint)c;
+				c >>= 32;
+				c += x_i * y_3 + zz[i + 3];
+				zz[i + 3] = (uint)c;
+				c >>= 32;
+				c += x_i * y_4 + zz[i + 4];
+				zz[i + 4] = (uint)c;
+				c >>= 32;
+				c += x_i * y_5 + zz[i + 5];
+				zz[i + 5] = (uint)c;
+				c >>= 32;
+				c += x_i * y_6 + zz[i + 6];
+				zz[i + 6] = (uint)c;
+				c >>= 32;
+				c += x_i * y_7 + zz[i + 7];
+				zz[i + 7] = (uint)c;
+				c >>= 32;
+				zz[i + 8] = (uint)c;
+			}
+			{
+				int i = 2;
+				ulong c = 0, x_i = x.d2;
+				c += x_i * y_0 + zz[i + 0];
+				zz[i + 0] = (uint)c;
+				c >>= 32;
+				c += x_i * y_1 + zz[i + 1];
+				zz[i + 1] = (uint)c;
+				c >>= 32;
+				c += x_i * y_2 + zz[i + 2];
+				zz[i + 2] = (uint)c;
+				c >>= 32;
+				c += x_i * y_3 + zz[i + 3];
+				zz[i + 3] = (uint)c;
+				c >>= 32;
+				c += x_i * y_4 + zz[i + 4];
+				zz[i + 4] = (uint)c;
+				c >>= 32;
+				c += x_i * y_5 + zz[i + 5];
+				zz[i + 5] = (uint)c;
+				c >>= 32;
+				c += x_i * y_6 + zz[i + 6];
+				zz[i + 6] = (uint)c;
+				c >>= 32;
+				c += x_i * y_7 + zz[i + 7];
+				zz[i + 7] = (uint)c;
+				c >>= 32;
+				zz[i + 8] = (uint)c;
+			}
+			{
+				int i = 3;
+				ulong c = 0, x_i = x.d3;
+				c += x_i * y_0 + zz[i + 0];
+				zz[i + 0] = (uint)c;
+				c >>= 32;
+				c += x_i * y_1 + zz[i + 1];
+				zz[i + 1] = (uint)c;
+				c >>= 32;
+				c += x_i * y_2 + zz[i + 2];
+				zz[i + 2] = (uint)c;
+				c >>= 32;
+				c += x_i * y_3 + zz[i + 3];
+				zz[i + 3] = (uint)c;
+				c >>= 32;
+				c += x_i * y_4 + zz[i + 4];
+				zz[i + 4] = (uint)c;
+				c >>= 32;
+				c += x_i * y_5 + zz[i + 5];
+				zz[i + 5] = (uint)c;
+				c >>= 32;
+				c += x_i * y_6 + zz[i + 6];
+				zz[i + 6] = (uint)c;
+				c >>= 32;
+				c += x_i * y_7 + zz[i + 7];
+				zz[i + 7] = (uint)c;
+				c >>= 32;
+				zz[i + 8] = (uint)c;
+			}
+			{
+				int i = 4;
+				ulong c = 0, x_i = x.d4;
+				c += x_i * y_0 + zz[i + 0];
+				zz[i + 0] = (uint)c;
+				c >>= 32;
+				c += x_i * y_1 + zz[i + 1];
+				zz[i + 1] = (uint)c;
+				c >>= 32;
+				c += x_i * y_2 + zz[i + 2];
+				zz[i + 2] = (uint)c;
+				c >>= 32;
+				c += x_i * y_3 + zz[i + 3];
+				zz[i + 3] = (uint)c;
+				c >>= 32;
+				c += x_i * y_4 + zz[i + 4];
+				zz[i + 4] = (uint)c;
+				c >>= 32;
+				c += x_i * y_5 + zz[i + 5];
+				zz[i + 5] = (uint)c;
+				c >>= 32;
+				c += x_i * y_6 + zz[i + 6];
+				zz[i + 6] = (uint)c;
+				c >>= 32;
+				c += x_i * y_7 + zz[i + 7];
+				zz[i + 7] = (uint)c;
+				c >>= 32;
+				zz[i + 8] = (uint)c;
+			}
+			{
+				int i = 5;
+				ulong c = 0, x_i = x.d5;
+				c += x_i * y_0 + zz[i + 0];
+				zz[i + 0] = (uint)c;
+				c >>= 32;
+				c += x_i * y_1 + zz[i + 1];
+				zz[i + 1] = (uint)c;
+				c >>= 32;
+				c += x_i * y_2 + zz[i + 2];
+				zz[i + 2] = (uint)c;
+				c >>= 32;
+				c += x_i * y_3 + zz[i + 3];
+				zz[i + 3] = (uint)c;
+				c >>= 32;
+				c += x_i * y_4 + zz[i + 4];
+				zz[i + 4] = (uint)c;
+				c >>= 32;
+				c += x_i * y_5 + zz[i + 5];
+				zz[i + 5] = (uint)c;
+				c >>= 32;
+				c += x_i * y_6 + zz[i + 6];
+				zz[i + 6] = (uint)c;
+				c >>= 32;
+				c += x_i * y_7 + zz[i + 7];
+				zz[i + 7] = (uint)c;
+				c >>= 32;
+				zz[i + 8] = (uint)c;
+			}
+			{
+				int i = 6;
+				ulong c = 0, x_i = x.d6;
+				c += x_i * y_0 + zz[i + 0];
+				zz[i + 0] = (uint)c;
+				c >>= 32;
+				c += x_i * y_1 + zz[i + 1];
+				zz[i + 1] = (uint)c;
+				c >>= 32;
+				c += x_i * y_2 + zz[i + 2];
+				zz[i + 2] = (uint)c;
+				c >>= 32;
+				c += x_i * y_3 + zz[i + 3];
+				zz[i + 3] = (uint)c;
+				c >>= 32;
+				c += x_i * y_4 + zz[i + 4];
+				zz[i + 4] = (uint)c;
+				c >>= 32;
+				c += x_i * y_5 + zz[i + 5];
+				zz[i + 5] = (uint)c;
+				c >>= 32;
+				c += x_i * y_6 + zz[i + 6];
+				zz[i + 6] = (uint)c;
+				c >>= 32;
+				c += x_i * y_7 + zz[i + 7];
+				zz[i + 7] = (uint)c;
+				c >>= 32;
+				zz[i + 8] = (uint)c;
+			}
+			{
+				int i = 7;
+				ulong c = 0, x_i = x.d7;
+				c += x_i * y_0 + zz[i + 0];
+				zz[i + 0] = (uint)c;
+				c >>= 32;
+				c += x_i * y_1 + zz[i + 1];
+				zz[i + 1] = (uint)c;
+				c >>= 32;
+				c += x_i * y_2 + zz[i + 2];
+				zz[i + 2] = (uint)c;
+				c >>= 32;
+				c += x_i * y_3 + zz[i + 3];
+				zz[i + 3] = (uint)c;
+				c >>= 32;
+				c += x_i * y_4 + zz[i + 4];
+				zz[i + 4] = (uint)c;
+				c >>= 32;
+				c += x_i * y_5 + zz[i + 5];
+				zz[i + 5] = (uint)c;
+				c >>= 32;
+				c += x_i * y_6 + zz[i + 6];
+				zz[i + 6] = (uint)c;
+				c >>= 32;
+				c += x_i * y_7 + zz[i + 7];
+				zz[i + 7] = (uint)c;
+				c >>= 32;
+				zz[i + 8] = (uint)c;
+			}
 		}
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		internal static void sqr_512(Span<uint> l, in Scalar a)
+		private const ulong M = 0xFFFFFFFFUL;
+		internal static void sqr_512(Span<uint> zz, in Scalar x)
 		{
-			/* 96 bit accumulator. */
-			uint c0 = 0, c1 = 0, c2 = 0;
+			ulong x_0 = x.d0;
+			ulong zz_1;
 
-			/* l[0..15] = a[0..7]^2. */
-			muladd_fast(ref c0, ref c1, ref c2, a.d0, a.d0);
-			extract_fast(ref c0, ref c1, ref c2, out l[0]);
-			muladd2(ref c0, ref c1, ref c2, a.d0, a.d1);
-			extract(ref c0, ref c1, ref c2, out l[1]);
-			muladd2(ref c0, ref c1, ref c2, a.d0, a.d2);
-			muladd(ref c0, ref c1, ref c2, a.d1, a.d1);
-			extract(ref c0, ref c1, ref c2, out l[2]);
-			muladd2(ref c0, ref c1, ref c2, a.d0, a.d3);
-			muladd2(ref c0, ref c1, ref c2, a.d1, a.d2);
-			extract(ref c0, ref c1, ref c2, out l[3]);
-			muladd2(ref c0, ref c1, ref c2, a.d0, a.d4);
-			muladd2(ref c0, ref c1, ref c2, a.d1, a.d3);
-			muladd(ref c0, ref c1, ref c2, a.d2, a.d2);
-			extract(ref c0, ref c1, ref c2, out l[4]);
-			muladd2(ref c0, ref c1, ref c2, a.d0, a.d5);
-			muladd2(ref c0, ref c1, ref c2, a.d1, a.d4);
-			muladd2(ref c0, ref c1, ref c2, a.d2, a.d3);
-			extract(ref c0, ref c1, ref c2, out l[5]);
-			muladd2(ref c0, ref c1, ref c2, a.d0, a.d6);
-			muladd2(ref c0, ref c1, ref c2, a.d1, a.d5);
-			muladd2(ref c0, ref c1, ref c2, a.d2, a.d4);
-			muladd(ref c0, ref c1, ref c2, a.d3, a.d3);
-			extract(ref c0, ref c1, ref c2, out l[6]);
-			muladd2(ref c0, ref c1, ref c2, a.d0, a.d7);
-			muladd2(ref c0, ref c1, ref c2, a.d1, a.d6);
-			muladd2(ref c0, ref c1, ref c2, a.d2, a.d5);
-			muladd2(ref c0, ref c1, ref c2, a.d3, a.d4);
-			extract(ref c0, ref c1, ref c2, out l[7]);
-			muladd2(ref c0, ref c1, ref c2, a.d1, a.d7);
-			muladd2(ref c0, ref c1, ref c2, a.d2, a.d6);
-			muladd2(ref c0, ref c1, ref c2, a.d3, a.d5);
-			muladd(ref c0, ref c1, ref c2, a.d4, a.d4);
-			extract(ref c0, ref c1, ref c2, out l[8]);
-			muladd2(ref c0, ref c1, ref c2, a.d2, a.d7);
-			muladd2(ref c0, ref c1, ref c2, a.d3, a.d6);
-			muladd2(ref c0, ref c1, ref c2, a.d4, a.d5);
-			extract(ref c0, ref c1, ref c2, out l[9]);
-			muladd2(ref c0, ref c1, ref c2, a.d3, a.d7);
-			muladd2(ref c0, ref c1, ref c2, a.d4, a.d6);
-			muladd(ref c0, ref c1, ref c2, a.d5, a.d5);
-			extract(ref c0, ref c1, ref c2, out l[10]);
-			muladd2(ref c0, ref c1, ref c2, a.d4, a.d7);
-			muladd2(ref c0, ref c1, ref c2, a.d5, a.d6);
-			extract(ref c0, ref c1, ref c2, out l[11]);
-			muladd2(ref c0, ref c1, ref c2, a.d5, a.d7);
-			muladd(ref c0, ref c1, ref c2, a.d6, a.d6);
-			extract(ref c0, ref c1, ref c2, out l[12]);
-			muladd2(ref c0, ref c1, ref c2, a.d6, a.d7);
-			extract(ref c0, ref c1, ref c2, out l[13]);
-			muladd_fast(ref c0, ref c1, ref c2, a.d7, a.d7);
-			extract_fast(ref c0, ref c1, ref c2, out l[14]);
-			VERIFY_CHECK(c1 == 0);
-			l[15] = c0;
+			uint c = 0, w;
+
+			int j = 16;
+			ulong xVal, p;
+
+			xVal = x.d7;
+			p = xVal * xVal;
+			zz[--j] = (c << 31) | (uint)(p >> 33);
+			zz[--j] = (uint)(p >> 1);
+			c = (uint)p;
+
+			xVal = x.d6;
+			p = xVal * xVal;
+			zz[--j] = (c << 31) | (uint)(p >> 33);
+			zz[--j] = (uint)(p >> 1);
+			c = (uint)p;
+
+			xVal = x.d5;
+			p = xVal * xVal;
+			zz[--j] = (c << 31) | (uint)(p >> 33);
+			zz[--j] = (uint)(p >> 1);
+			c = (uint)p;
+
+			xVal = x.d4;
+			p = xVal * xVal;
+			zz[--j] = (c << 31) | (uint)(p >> 33);
+			zz[--j] = (uint)(p >> 1);
+			c = (uint)p;
+
+			xVal = x.d3;
+			p = xVal * xVal;
+			zz[--j] = (c << 31) | (uint)(p >> 33);
+			zz[--j] = (uint)(p >> 1);
+			c = (uint)p;
+
+			xVal = x.d2;
+			p = xVal * xVal;
+			zz[--j] = (c << 31) | (uint)(p >> 33);
+			zz[--j] = (uint)(p >> 1);
+			c = (uint)p;
+
+			xVal = x.d1;
+			p = xVal * xVal;
+			zz[--j] = (c << 31) | (uint)(p >> 33);
+			zz[--j] = (uint)(p >> 1);
+			c = (uint)p;
+
+			p = x_0 * x_0;
+			zz_1 = (ulong)(c << 31) | (p >> 33);
+			zz[0] = (uint)p;
+			c = (uint)(p >> 32) & 1;
+
+
+			ulong x_1 = x.d1;
+			ulong zz_2 = zz[2];
+
+			{
+				zz_1 += x_1 * x_0;
+				w = (uint)zz_1;
+				zz[1] = (w << 1) | c;
+				c = w >> 31;
+				zz_2 += zz_1 >> 32;
+			}
+
+			ulong x_2 = x.d2;
+			ulong zz_3 = zz[3];
+			ulong zz_4 = zz[4];
+			{
+				zz_2 += x_2 * x_0;
+				w = (uint)zz_2;
+				zz[2] = (w << 1) | c;
+				c = w >> 31;
+				zz_3 += (zz_2 >> 32) + x_2 * x_1;
+				zz_4 += zz_3 >> 32;
+				zz_3 &= M;
+			}
+
+			ulong x_3 = x.d3;
+			ulong zz_5 = zz[5] + (zz_4 >> 32); zz_4 &= M;
+			ulong zz_6 = zz[6] + (zz_5 >> 32); zz_5 &= M;
+			{
+				zz_3 += x_3 * x_0;
+				w = (uint)zz_3;
+				zz[3] = (w << 1) | c;
+				c = w >> 31;
+				zz_4 += (zz_3 >> 32) + x_3 * x_1;
+				zz_5 += (zz_4 >> 32) + x_3 * x_2;
+				zz_4 &= M;
+				zz_6 += zz_5 >> 32;
+				zz_5 &= M;
+			}
+
+			ulong x_4 = x.d4;
+			ulong zz_7 = zz[7] + (zz_6 >> 32); zz_6 &= M;
+			ulong zz_8 = zz[8] + (zz_7 >> 32); zz_7 &= M;
+			{
+				zz_4 += x_4 * x_0;
+				w = (uint)zz_4;
+				zz[4] = (w << 1) | c;
+				c = w >> 31;
+				zz_5 += (zz_4 >> 32) + x_4 * x_1;
+				zz_6 += (zz_5 >> 32) + x_4 * x_2;
+				zz_5 &= M;
+				zz_7 += (zz_6 >> 32) + x_4 * x_3;
+				zz_6 &= M;
+				zz_8 += zz_7 >> 32;
+				zz_7 &= M;
+			}
+
+			ulong x_5 = x.d5;
+			ulong zz_9 = zz[9] + (zz_8 >> 32); zz_8 &= M;
+			ulong zz_10 = zz[10] + (zz_9 >> 32); zz_9 &= M;
+			{
+				zz_5 += x_5 * x_0;
+				w = (uint)zz_5;
+				zz[5] = (w << 1) | c;
+				c = w >> 31;
+				zz_6 += (zz_5 >> 32) + x_5 * x_1;
+				zz_7 += (zz_6 >> 32) + x_5 * x_2;
+				zz_6 &= M;
+				zz_8 += (zz_7 >> 32) + x_5 * x_3;
+				zz_7 &= M;
+				zz_9 += (zz_8 >> 32) + x_5 * x_4;
+				zz_8 &= M;
+				zz_10 += zz_9 >> 32;
+				zz_9 &= M;
+			}
+
+			ulong x_6 = x.d6;
+			ulong zz_11 = zz[11] + (zz_10 >> 32); zz_10 &= M;
+			ulong zz_12 = zz[12] + (zz_11 >> 32); zz_11 &= M;
+			{
+				zz_6 += x_6 * x_0;
+				w = (uint)zz_6;
+				zz[6] = (w << 1) | c;
+				c = w >> 31;
+				zz_7 += (zz_6 >> 32) + x_6 * x_1;
+				zz_8 += (zz_7 >> 32) + x_6 * x_2;
+				zz_7 &= M;
+				zz_9 += (zz_8 >> 32) + x_6 * x_3;
+				zz_8 &= M;
+				zz_10 += (zz_9 >> 32) + x_6 * x_4;
+				zz_9 &= M;
+				zz_11 += (zz_10 >> 32) + x_6 * x_5;
+				zz_10 &= M;
+				zz_12 += zz_11 >> 32;
+				zz_11 &= M;
+			}
+
+			ulong x_7 = x.d7;
+			ulong zz_13 = zz[13] + (zz_12 >> 32); zz_12 &= M;
+			ulong zz_14 = zz[14] + (zz_13 >> 32); zz_13 &= M;
+			{
+				zz_7 += x_7 * x_0;
+				w = (uint)zz_7;
+				zz[7] = (w << 1) | c;
+				c = w >> 31;
+				zz_8 += (zz_7 >> 32) + x_7 * x_1;
+				zz_9 += (zz_8 >> 32) + x_7 * x_2;
+				zz_10 += (zz_9 >> 32) + x_7 * x_3;
+				zz_11 += (zz_10 >> 32) + x_7 * x_4;
+				zz_12 += (zz_11 >> 32) + x_7 * x_5;
+				zz_13 += (zz_12 >> 32) + x_7 * x_6;
+				zz_14 += zz_13 >> 32;
+			}
+
+			w = (uint)zz_8;
+			zz[8] = (w << 1) | c;
+			c = w >> 31;
+			w = (uint)zz_9;
+			zz[9] = (w << 1) | c;
+			c = w >> 31;
+			w = (uint)zz_10;
+			zz[10] = (w << 1) | c;
+			c = w >> 31;
+			w = (uint)zz_11;
+			zz[11] = (w << 1) | c;
+			c = w >> 31;
+			w = (uint)zz_12;
+			zz[12] = (w << 1) | c;
+			c = w >> 31;
+			w = (uint)zz_13;
+			zz[13] = (w << 1) | c;
+			c = w >> 31;
+			w = (uint)zz_14;
+			zz[14] = (w << 1) | c;
+			c = w >> 31;
+			w = zz[15] + (uint)(zz_14 >> 32);
+			zz[15] = (w << 1) | c;
 		}
 		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -688,42 +979,42 @@ namespace NBitcoin.Secp256k1
 		}
 
 		/**
- * The Secp256k1 curve has an endomorphism, where lambda * (x, y) = (beta * x, y), where
- * lambda is {0x53,0x63,0xad,0x4c,0xc0,0x5c,0x30,0xe0,0xa5,0x26,0x1c,0x02,0x88,0x12,0x64,0x5a,
- *            0x12,0x2e,0x22,0xea,0x20,0x81,0x66,0x78,0xdf,0x02,0x96,0x7c,0x1b,0x23,0xbd,0x72}
- *
- * "Guide to Elliptic Curve Cryptography" (Hankerson, Menezes, Vanstone) gives an algorithm
- * (algorithm 3.74) to find k1 and k2 given k, such that k1 + k2 * lambda == k mod n, and k1
- * and k2 have a small size.
- * It relies on constants a1, b1, a2, b2. These constants for the value of lambda above are:
- *
- * - a1 =      {0x30,0x86,0xd2,0x21,0xa7,0xd4,0x6b,0xcd,0xe8,0x6c,0x90,0xe4,0x92,0x84,0xeb,0x15}
- * - b1 =     -{0xe4,0x43,0x7e,0xd6,0x01,0x0e,0x88,0x28,0x6f,0x54,0x7f,0xa9,0x0a,0xbf,0xe4,0xc3}
- * - a2 = {0x01,0x14,0xca,0x50,0xf7,0xa8,0xe2,0xf3,0xf6,0x57,0xc1,0x10,0x8d,0x9d,0x44,0xcf,0xd8}
- * - b2 =      {0x30,0x86,0xd2,0x21,0xa7,0xd4,0x6b,0xcd,0xe8,0x6c,0x90,0xe4,0x92,0x84,0xeb,0x15}
- *
- * The algorithm then computes c1 = round(b1 * k / n) and c2 = round(b2 * k / n), and gives
- * k1 = k - (c1*a1 + c2*a2) and k2 = -(c1*b1 + c2*b2). Instead, we use modular arithmetic, and
- * compute k1 as k - k2 * lambda, avoiding the need for constants a1 and a2.
- *
- * g1, g2 are precomputed constants used to replace division with a rounded multiplication
- * when decomposing the scalar for an endomorphism-based point multiplication.
- *
- * The possibility of using precomputed estimates is mentioned in "Guide to Elliptic Curve
- * Cryptography" (Hankerson, Menezes, Vanstone) in section 3.5.
- *
- * The derivation is described in the paper "Efficient Software Implementation of Public-Key
- * Cryptography on Sensor Networks Using the MSP430X Microcontroller" (Gouvea, Oliveira, Lopez),
- * Section 4.3 (here we use a somewhat higher-precision estimate):
- * d = a1*b2 - b1*a2
- * g1 = round((2^272)*b2/d)
- * g2 = round((2^272)*b1/d)
- *
- * (Note that 'd' is also equal to the curve order here because [a1,b1] and [a2,b2] are found
- * as outputs of the Extended Euclidean Algorithm on inputs 'order' and 'lambda').
- *
- * The function below splits a in r1 and r2, such that r1 + lambda * r2 == a (mod order).
- */
+		* The Secp256k1 curve has an endomorphism, where lambda * (x, y) = (beta * x, y), where
+		* lambda is {0x53,0x63,0xad,0x4c,0xc0,0x5c,0x30,0xe0,0xa5,0x26,0x1c,0x02,0x88,0x12,0x64,0x5a,
+		*            0x12,0x2e,0x22,0xea,0x20,0x81,0x66,0x78,0xdf,0x02,0x96,0x7c,0x1b,0x23,0xbd,0x72}
+		*
+		* "Guide to Elliptic Curve Cryptography" (Hankerson, Menezes, Vanstone) gives an algorithm
+		* (algorithm 3.74) to find k1 and k2 given k, such that k1 + k2 * lambda == k mod n, and k1
+		* and k2 have a small size.
+		* It relies on constants a1, b1, a2, b2. These constants for the value of lambda above are:
+		*
+		* - a1 =      {0x30,0x86,0xd2,0x21,0xa7,0xd4,0x6b,0xcd,0xe8,0x6c,0x90,0xe4,0x92,0x84,0xeb,0x15}
+		* - b1 =     -{0xe4,0x43,0x7e,0xd6,0x01,0x0e,0x88,0x28,0x6f,0x54,0x7f,0xa9,0x0a,0xbf,0xe4,0xc3}
+		* - a2 = {0x01,0x14,0xca,0x50,0xf7,0xa8,0xe2,0xf3,0xf6,0x57,0xc1,0x10,0x8d,0x9d,0x44,0xcf,0xd8}
+		* - b2 =      {0x30,0x86,0xd2,0x21,0xa7,0xd4,0x6b,0xcd,0xe8,0x6c,0x90,0xe4,0x92,0x84,0xeb,0x15}
+		*
+		* The algorithm then computes c1 = round(b1 * k / n) and c2 = round(b2 * k / n), and gives
+		* k1 = k - (c1*a1 + c2*a2) and k2 = -(c1*b1 + c2*b2). Instead, we use modular arithmetic, and
+		* compute k1 as k - k2 * lambda, avoiding the need for constants a1 and a2.
+		*
+		* g1, g2 are precomputed constants used to replace division with a rounded multiplication
+		* when decomposing the scalar for an endomorphism-based point multiplication.
+		*
+		* The possibility of using precomputed estimates is mentioned in "Guide to Elliptic Curve
+		* Cryptography" (Hankerson, Menezes, Vanstone) in section 3.5.
+		*
+		* The derivation is described in the paper "Efficient Software Implementation of Public-Key
+		* Cryptography on Sensor Networks Using the MSP430X Microcontroller" (Gouvea, Oliveira, Lopez),
+		* Section 4.3 (here we use a somewhat higher-precision estimate):
+		* d = a1*b2 - b1*a2
+		* g1 = round((2^272)*b2/d)
+		* g2 = round((2^272)*b1/d)
+		*
+		* (Note that 'd' is also equal to the curve order here because [a1,b1] and [a2,b2] are found
+		* as outputs of the Extended Euclidean Algorithm on inputs 'order' and 'lambda').
+		*
+		* The function below splits a in r1 and r2, such that r1 + lambda * r2 == a (mod order).
+*/
 
 		public static Scalar SECP256K1_SCALAR_CONST(uint d7, uint d6, uint d5, uint d4, uint d3, uint d2, uint d1, uint d0)
 		{

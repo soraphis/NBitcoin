@@ -21,6 +21,17 @@ namespace NBitcoin.Secp256k1
 			this.n6 = n6;
 			this.n7 = n7;
 		}
+		public FieldElementStorage(ReadOnlySpan<uint> n)
+		{
+			this.n0 = n[0];
+			this.n1 = n[1];
+			this.n2 = n[2];
+			this.n3 = n[3];
+			this.n4 = n[4];
+			this.n5 = n[5];
+			this.n6 = n[6];
+			this.n7 = n[7];
+		}
 
 		public readonly void Deconstruct(
 			out uint n0,
@@ -46,22 +57,22 @@ namespace NBitcoin.Secp256k1
 		public readonly FieldElement ToFieldElement()
 		{
 			ref readonly FieldElementStorage a = ref this;
-			uint n0, n1, n2, n3, n4, n5, n6, n7, n8, n9;
+			Span<uint> n = stackalloc uint[FieldElement.NCount];
 			int magnitude;
 			bool normalized;
-			n0 = a.n0 & 0x3FFFFFFU;
-			n1 = a.n0 >> 26 | ((a.n1 << 6) & 0x3FFFFFFU);
-			n2 = a.n1 >> 20 | ((a.n2 << 12) & 0x3FFFFFFU);
-			n3 = a.n2 >> 14 | ((a.n3 << 18) & 0x3FFFFFFU);
-			n4 = a.n3 >> 8 | ((a.n4 << 24) & 0x3FFFFFFU);
-			n5 = (a.n4 >> 2) & 0x3FFFFFFU;
-			n6 = a.n4 >> 28 | ((a.n5 << 4) & 0x3FFFFFFU);
-			n7 = a.n5 >> 22 | ((a.n6 << 10) & 0x3FFFFFFU);
-			n8 = a.n6 >> 16 | ((a.n7 << 16) & 0x3FFFFFFU);
-			n9 = a.n7 >> 10;
+			n[0] = a.n0 & 0x3FFFFFFU;
+			n[1] = a.n0 >> 26 | ((a.n1 << 6) & 0x3FFFFFFU);
+			n[2] = a.n1 >> 20 | ((a.n2 << 12) & 0x3FFFFFFU);
+			n[3] = a.n2 >> 14 | ((a.n3 << 18) & 0x3FFFFFFU);
+			n[4] = a.n3 >> 8 | ((a.n4 << 24) & 0x3FFFFFFU);
+			n[5] = (a.n4 >> 2) & 0x3FFFFFFU;
+			n[6] = a.n4 >> 28 | ((a.n5 << 4) & 0x3FFFFFFU);
+			n[7] = a.n5 >> 22 | ((a.n6 << 10) & 0x3FFFFFFU);
+			n[8] = a.n6 >> 16 | ((a.n7 << 16) & 0x3FFFFFFU);
+			n[9] = a.n7 >> 10;
 			magnitude = 1;
 			normalized = true;
-			return new FieldElement(n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, magnitude, normalized);
+			return new FieldElement(n, magnitude, normalized);
 		}
 		[Conditional("SECP256K1_VERIFY")]
 		private static void VERIFY_CHECK(bool value)
@@ -69,22 +80,36 @@ namespace NBitcoin.Secp256k1
 			if (!value)
 				throw new InvalidOperationException("VERIFY_CHECK failed (bug in C# secp256k1)");
 		}
+		internal const int NCount = 8;
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public static void CMov(ref FieldElementStorage r, in FieldElementStorage a, int flag)
 		{
-			var (n0, n1, n2, n3, n4, n5, n6, n7) = r;
+			Span<uint> n = stackalloc uint[NCount];
+			r.Deconstruct(ref n);
 			uint mask0, mask1;
 			mask0 = (uint)flag + ~((uint)0);
 			mask1 = ~mask0;
-			n0 = (n0 & mask0) | (a.n0 & mask1);
-			n1 = (n1 & mask0) | (a.n1 & mask1);
-			n2 = (n2 & mask0) | (a.n2 & mask1);
-			n3 = (n3 & mask0) | (a.n3 & mask1);
-			n4 = (n4 & mask0) | (a.n4 & mask1);
-			n5 = (n5 & mask0) | (a.n5 & mask1);
-			n6 = (n6 & mask0) | (a.n6 & mask1);
-			n7 = (n7 & mask0) | (a.n7 & mask1);
-			r = new FieldElementStorage(n0, n1, n2, n3, n4, n5, n6, n7);
+			n[0] = (n[0] & mask0) | (a.n0 & mask1);
+			n[1] = (n[1] & mask0) | (a.n1 & mask1);
+			n[2] = (n[2] & mask0) | (a.n2 & mask1);
+			n[3] = (n[3] & mask0) | (a.n3 & mask1);
+			n[4] = (n[4] & mask0) | (a.n4 & mask1);
+			n[5] = (n[5] & mask0) | (a.n5 & mask1);
+			n[6] = (n[6] & mask0) | (a.n6 & mask1);
+			n[7] = (n[7] & mask0) | (a.n7 & mask1);
+			r = new FieldElementStorage(n);
+		}
+
+		public void Deconstruct(ref Span<uint> n)
+		{
+			n[0] = n0;
+			n[1] = n1;
+			n[2] = n2;
+			n[3] = n3;
+			n[4] = n4;
+			n[5] = n5;
+			n[6] = n6;
+			n[7] = n7;
 		}
 	}
 }
