@@ -13,7 +13,7 @@ namespace NBitcoin.Secp256k1
 			0xFD17B448U, 0xA6855419U, 0x9C47D08FU, 0xFB10D4B8U
 		);
 		public static readonly Scalar N = new Scalar(Scalar.SECP256K1_N_0, Scalar.SECP256K1_N_1, Scalar.SECP256K1_N_2, Scalar.SECP256K1_N_3, Scalar.SECP256K1_N_4, Scalar.SECP256K1_N_5, Scalar.SECP256K1_N_6, Scalar.SECP256K1_N_7);
-		public static readonly Scalar _NC = new Scalar(Scalar.SECP256K1_N_C_0, Scalar.SECP256K1_N_C_1, Scalar.SECP256K1_N_C_2, Scalar.SECP256K1_N_C_3, Scalar.SECP256K1_N_C_4, 0, 0, 0);
+		public static readonly Scalar NC = new Scalar(Scalar.SECP256K1_N_C_0, Scalar.SECP256K1_N_C_1, Scalar.SECP256K1_N_C_2, Scalar.SECP256K1_N_C_3, Scalar.SECP256K1_N_C_4, 0, 0, 0);
 		public const uint CURVE_B = 7;
 		/** Prefix byte used to tag various encoded curvepoints for specific purposes */
 		public const byte SECP256K1_TAG_PUBKEY_EVEN = 0x02;

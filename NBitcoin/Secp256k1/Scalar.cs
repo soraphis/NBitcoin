@@ -325,310 +325,102 @@ namespace NBitcoin.Secp256k1
 			return 2 * (mask == 0 ? 1 : 0) - 1;
 		}
 
-		private static void mul_512(Span<uint> zz, in Scalar x, in Scalar b)
+		private static void mul_512(Span<uint> zz, in Scalar a, in Scalar b)
 		{
-			ulong y_0 = b.d0;
-			ulong y_1 = b.d1;
-			ulong y_2 = b.d2;
-			ulong y_3 = b.d3;
-			ulong y_4 = b.d4;
-			ulong y_5 = b.d5;
-			ulong y_6 = b.d6;
-			ulong y_7 = b.d7;
+			Span<uint> x = stackalloc uint[DCount];
+			a.Deconstruct(ref x);
+			Span<uint> y = stackalloc uint[DCount];
+			b.Deconstruct(ref y);
 
 			{
-				ulong c = 0, x_0 = x.d0;
-				c += x_0 * y_0;
+				ulong c = 0, x_0 = x[0];
+				c += x_0 * y[0];
 				zz[0] = (uint)c;
 				c >>= 32;
-				c += x_0 * y_1;
+				c += x_0 * y[1];
 				zz[1] = (uint)c;
 				c >>= 32;
-				c += x_0 * y_2;
+				c += x_0 * y[2];
 				zz[2] = (uint)c;
 				c >>= 32;
-				c += x_0 * y_3;
+				c += x_0 * y[3];
 				zz[3] = (uint)c;
 				c >>= 32;
-				c += x_0 * y_4;
+				c += x_0 * y[4];
 				zz[4] = (uint)c;
 				c >>= 32;
-				c += x_0 * y_5;
+				c += x_0 * y[5];
 				zz[5] = (uint)c;
 				c >>= 32;
-				c += x_0 * y_6;
+				c += x_0 * y[6];
 				zz[6] = (uint)c;
 				c >>= 32;
-				c += x_0 * y_7;
+				c += x_0 * y[7];
 				zz[7] = (uint)c;
 				c >>= 32;
 				zz[8] = (uint)c;
 			}
 
+			for (int i = 1; i < 8; ++i)
 			{
-				int i = 1;
-				ulong c = 0, x_i = x.d1;
-				c += x_i * y_0 + zz[i + 0];
+				ulong c = 0, x_i = x[i];
+				c += x_i * y[0] + zz[i + 0];
 				zz[i + 0] = (uint)c;
 				c >>= 32;
-				c += x_i * y_1 + zz[i + 1];
+				c += x_i * y[1] + zz[i + 1];
 				zz[i + 1] = (uint)c;
 				c >>= 32;
-				c += x_i * y_2 + zz[i + 2];
+				c += x_i * y[2] + zz[i + 2];
 				zz[i + 2] = (uint)c;
 				c >>= 32;
-				c += x_i * y_3 + zz[i + 3];
+				c += x_i * y[3] + zz[i + 3];
 				zz[i + 3] = (uint)c;
 				c >>= 32;
-				c += x_i * y_4 + zz[i + 4];
+				c += x_i * y[4] + zz[i + 4];
 				zz[i + 4] = (uint)c;
 				c >>= 32;
-				c += x_i * y_5 + zz[i + 5];
+				c += x_i * y[5] + zz[i + 5];
 				zz[i + 5] = (uint)c;
 				c >>= 32;
-				c += x_i * y_6 + zz[i + 6];
+				c += x_i * y[6] + zz[i + 6];
 				zz[i + 6] = (uint)c;
 				c >>= 32;
-				c += x_i * y_7 + zz[i + 7];
-				zz[i + 7] = (uint)c;
-				c >>= 32;
-				zz[i + 8] = (uint)c;
-			}
-			{
-				int i = 2;
-				ulong c = 0, x_i = x.d2;
-				c += x_i * y_0 + zz[i + 0];
-				zz[i + 0] = (uint)c;
-				c >>= 32;
-				c += x_i * y_1 + zz[i + 1];
-				zz[i + 1] = (uint)c;
-				c >>= 32;
-				c += x_i * y_2 + zz[i + 2];
-				zz[i + 2] = (uint)c;
-				c >>= 32;
-				c += x_i * y_3 + zz[i + 3];
-				zz[i + 3] = (uint)c;
-				c >>= 32;
-				c += x_i * y_4 + zz[i + 4];
-				zz[i + 4] = (uint)c;
-				c >>= 32;
-				c += x_i * y_5 + zz[i + 5];
-				zz[i + 5] = (uint)c;
-				c >>= 32;
-				c += x_i * y_6 + zz[i + 6];
-				zz[i + 6] = (uint)c;
-				c >>= 32;
-				c += x_i * y_7 + zz[i + 7];
-				zz[i + 7] = (uint)c;
-				c >>= 32;
-				zz[i + 8] = (uint)c;
-			}
-			{
-				int i = 3;
-				ulong c = 0, x_i = x.d3;
-				c += x_i * y_0 + zz[i + 0];
-				zz[i + 0] = (uint)c;
-				c >>= 32;
-				c += x_i * y_1 + zz[i + 1];
-				zz[i + 1] = (uint)c;
-				c >>= 32;
-				c += x_i * y_2 + zz[i + 2];
-				zz[i + 2] = (uint)c;
-				c >>= 32;
-				c += x_i * y_3 + zz[i + 3];
-				zz[i + 3] = (uint)c;
-				c >>= 32;
-				c += x_i * y_4 + zz[i + 4];
-				zz[i + 4] = (uint)c;
-				c >>= 32;
-				c += x_i * y_5 + zz[i + 5];
-				zz[i + 5] = (uint)c;
-				c >>= 32;
-				c += x_i * y_6 + zz[i + 6];
-				zz[i + 6] = (uint)c;
-				c >>= 32;
-				c += x_i * y_7 + zz[i + 7];
-				zz[i + 7] = (uint)c;
-				c >>= 32;
-				zz[i + 8] = (uint)c;
-			}
-			{
-				int i = 4;
-				ulong c = 0, x_i = x.d4;
-				c += x_i * y_0 + zz[i + 0];
-				zz[i + 0] = (uint)c;
-				c >>= 32;
-				c += x_i * y_1 + zz[i + 1];
-				zz[i + 1] = (uint)c;
-				c >>= 32;
-				c += x_i * y_2 + zz[i + 2];
-				zz[i + 2] = (uint)c;
-				c >>= 32;
-				c += x_i * y_3 + zz[i + 3];
-				zz[i + 3] = (uint)c;
-				c >>= 32;
-				c += x_i * y_4 + zz[i + 4];
-				zz[i + 4] = (uint)c;
-				c >>= 32;
-				c += x_i * y_5 + zz[i + 5];
-				zz[i + 5] = (uint)c;
-				c >>= 32;
-				c += x_i * y_6 + zz[i + 6];
-				zz[i + 6] = (uint)c;
-				c >>= 32;
-				c += x_i * y_7 + zz[i + 7];
-				zz[i + 7] = (uint)c;
-				c >>= 32;
-				zz[i + 8] = (uint)c;
-			}
-			{
-				int i = 5;
-				ulong c = 0, x_i = x.d5;
-				c += x_i * y_0 + zz[i + 0];
-				zz[i + 0] = (uint)c;
-				c >>= 32;
-				c += x_i * y_1 + zz[i + 1];
-				zz[i + 1] = (uint)c;
-				c >>= 32;
-				c += x_i * y_2 + zz[i + 2];
-				zz[i + 2] = (uint)c;
-				c >>= 32;
-				c += x_i * y_3 + zz[i + 3];
-				zz[i + 3] = (uint)c;
-				c >>= 32;
-				c += x_i * y_4 + zz[i + 4];
-				zz[i + 4] = (uint)c;
-				c >>= 32;
-				c += x_i * y_5 + zz[i + 5];
-				zz[i + 5] = (uint)c;
-				c >>= 32;
-				c += x_i * y_6 + zz[i + 6];
-				zz[i + 6] = (uint)c;
-				c >>= 32;
-				c += x_i * y_7 + zz[i + 7];
-				zz[i + 7] = (uint)c;
-				c >>= 32;
-				zz[i + 8] = (uint)c;
-			}
-			{
-				int i = 6;
-				ulong c = 0, x_i = x.d6;
-				c += x_i * y_0 + zz[i + 0];
-				zz[i + 0] = (uint)c;
-				c >>= 32;
-				c += x_i * y_1 + zz[i + 1];
-				zz[i + 1] = (uint)c;
-				c >>= 32;
-				c += x_i * y_2 + zz[i + 2];
-				zz[i + 2] = (uint)c;
-				c >>= 32;
-				c += x_i * y_3 + zz[i + 3];
-				zz[i + 3] = (uint)c;
-				c >>= 32;
-				c += x_i * y_4 + zz[i + 4];
-				zz[i + 4] = (uint)c;
-				c >>= 32;
-				c += x_i * y_5 + zz[i + 5];
-				zz[i + 5] = (uint)c;
-				c >>= 32;
-				c += x_i * y_6 + zz[i + 6];
-				zz[i + 6] = (uint)c;
-				c >>= 32;
-				c += x_i * y_7 + zz[i + 7];
-				zz[i + 7] = (uint)c;
-				c >>= 32;
-				zz[i + 8] = (uint)c;
-			}
-			{
-				int i = 7;
-				ulong c = 0, x_i = x.d7;
-				c += x_i * y_0 + zz[i + 0];
-				zz[i + 0] = (uint)c;
-				c >>= 32;
-				c += x_i * y_1 + zz[i + 1];
-				zz[i + 1] = (uint)c;
-				c >>= 32;
-				c += x_i * y_2 + zz[i + 2];
-				zz[i + 2] = (uint)c;
-				c >>= 32;
-				c += x_i * y_3 + zz[i + 3];
-				zz[i + 3] = (uint)c;
-				c >>= 32;
-				c += x_i * y_4 + zz[i + 4];
-				zz[i + 4] = (uint)c;
-				c >>= 32;
-				c += x_i * y_5 + zz[i + 5];
-				zz[i + 5] = (uint)c;
-				c >>= 32;
-				c += x_i * y_6 + zz[i + 6];
-				zz[i + 6] = (uint)c;
-				c >>= 32;
-				c += x_i * y_7 + zz[i + 7];
+				c += x_i * y[7] + zz[i + 7];
 				zz[i + 7] = (uint)c;
 				c >>= 32;
 				zz[i + 8] = (uint)c;
 			}
 		}
 		private const ulong M = 0xFFFFFFFFUL;
-		internal static void sqr_512(Span<uint> zz, in Scalar x)
+		internal static void sqr_512(Span<uint> zz, in Scalar a)
 		{
-			ulong x_0 = x.d0;
+			Span<uint> x = stackalloc uint[DCount];
+			a.Deconstruct(ref x);
+			ulong x_0 = x[0];
 			ulong zz_1;
 
 			uint c = 0, w;
+			{
+				int i = 7, j = 16;
+				do
+				{
+					ulong xVal = x[i--];
+					ulong p = xVal * xVal;
+					zz[--j] = (c << 31) | (uint)(p >> 33);
+					zz[--j] = (uint)(p >> 1);
+					c = (uint)p;
+				}
+				while (i > 0);
 
-			int j = 16;
-			ulong xVal, p;
+				{
+					ulong p = x_0 * x_0;
+					zz_1 = (ulong)(c << 31) | (p >> 33);
+					zz[0] = (uint)p;
+					c = (uint)(p >> 32) & 1;
+				}
+			}
 
-			xVal = x.d7;
-			p = xVal * xVal;
-			zz[--j] = (c << 31) | (uint)(p >> 33);
-			zz[--j] = (uint)(p >> 1);
-			c = (uint)p;
-
-			xVal = x.d6;
-			p = xVal * xVal;
-			zz[--j] = (c << 31) | (uint)(p >> 33);
-			zz[--j] = (uint)(p >> 1);
-			c = (uint)p;
-
-			xVal = x.d5;
-			p = xVal * xVal;
-			zz[--j] = (c << 31) | (uint)(p >> 33);
-			zz[--j] = (uint)(p >> 1);
-			c = (uint)p;
-
-			xVal = x.d4;
-			p = xVal * xVal;
-			zz[--j] = (c << 31) | (uint)(p >> 33);
-			zz[--j] = (uint)(p >> 1);
-			c = (uint)p;
-
-			xVal = x.d3;
-			p = xVal * xVal;
-			zz[--j] = (c << 31) | (uint)(p >> 33);
-			zz[--j] = (uint)(p >> 1);
-			c = (uint)p;
-
-			xVal = x.d2;
-			p = xVal * xVal;
-			zz[--j] = (c << 31) | (uint)(p >> 33);
-			zz[--j] = (uint)(p >> 1);
-			c = (uint)p;
-
-			xVal = x.d1;
-			p = xVal * xVal;
-			zz[--j] = (c << 31) | (uint)(p >> 33);
-			zz[--j] = (uint)(p >> 1);
-			c = (uint)p;
-
-			p = x_0 * x_0;
-			zz_1 = (ulong)(c << 31) | (p >> 33);
-			zz[0] = (uint)p;
-			c = (uint)(p >> 32) & 1;
-
-
-			ulong x_1 = x.d1;
+			ulong x_1 = x[1];
 			ulong zz_2 = zz[2];
 
 			{
@@ -639,7 +431,7 @@ namespace NBitcoin.Secp256k1
 				zz_2 += zz_1 >> 32;
 			}
 
-			ulong x_2 = x.d2;
+			ulong x_2 = x[2];
 			ulong zz_3 = zz[3];
 			ulong zz_4 = zz[4];
 			{
@@ -652,7 +444,7 @@ namespace NBitcoin.Secp256k1
 				zz_3 &= M;
 			}
 
-			ulong x_3 = x.d3;
+			ulong x_3 = x[3];
 			ulong zz_5 = zz[5] + (zz_4 >> 32); zz_4 &= M;
 			ulong zz_6 = zz[6] + (zz_5 >> 32); zz_5 &= M;
 			{
@@ -667,7 +459,7 @@ namespace NBitcoin.Secp256k1
 				zz_5 &= M;
 			}
 
-			ulong x_4 = x.d4;
+			ulong x_4 = x[4];
 			ulong zz_7 = zz[7] + (zz_6 >> 32); zz_6 &= M;
 			ulong zz_8 = zz[8] + (zz_7 >> 32); zz_7 &= M;
 			{
@@ -684,7 +476,7 @@ namespace NBitcoin.Secp256k1
 				zz_7 &= M;
 			}
 
-			ulong x_5 = x.d5;
+			ulong x_5 = x[5];
 			ulong zz_9 = zz[9] + (zz_8 >> 32); zz_8 &= M;
 			ulong zz_10 = zz[10] + (zz_9 >> 32); zz_9 &= M;
 			{
@@ -703,7 +495,7 @@ namespace NBitcoin.Secp256k1
 				zz_9 &= M;
 			}
 
-			ulong x_6 = x.d6;
+			ulong x_6 = x[6];
 			ulong zz_11 = zz[11] + (zz_10 >> 32); zz_10 &= M;
 			ulong zz_12 = zz[12] + (zz_11 >> 32); zz_11 &= M;
 			{
@@ -724,7 +516,7 @@ namespace NBitcoin.Secp256k1
 				zz_11 &= M;
 			}
 
-			ulong x_7 = x.d7;
+			ulong x_7 = x[7];
 			ulong zz_13 = zz[13] + (zz_12 >> 32); zz_12 &= M;
 			ulong zz_14 = zz[14] + (zz_13 >> 32); zz_13 &= M;
 			{

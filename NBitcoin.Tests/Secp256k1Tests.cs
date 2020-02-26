@@ -662,6 +662,36 @@ namespace NBitcoin.Tests
 		}
 		[Fact]
 		[Trait("UnitTest", "UnitTest")]
+		public void test_scalar_split()
+		{
+			Scalar full;
+			Scalar slam = default;
+			Scalar s1 = default;
+			Span<byte> zero = stackalloc byte[32];
+			Span<byte> tmp = stackalloc byte[32];
+
+			full = random_scalar_order_test();
+
+			full.SplitLambda(out s1, out slam);
+
+			/* check that both are <= 128 bits in size */
+			if (s1.IsHigh)
+			{
+				s1 = s1.Negate();
+			}
+			if (slam.IsHigh)
+			{
+				slam = slam.Negate();
+			}
+
+			s1.WriteToSpan(tmp);
+			AssertEx.CollectionEquals(zero.Slice(0,16).ToArray(), tmp.Slice(0, 16).ToArray());
+			slam.WriteToSpan(tmp);
+			AssertEx.CollectionEquals(zero.Slice(0, 16).ToArray(), tmp.Slice(0, 16).ToArray());
+		}
+
+		[Fact]
+		[Trait("UnitTest", "UnitTest")]
 		public void test_ge_neg()
 		{
 			GroupElement ge = new GroupElement(
