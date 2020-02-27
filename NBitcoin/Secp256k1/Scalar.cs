@@ -169,9 +169,9 @@ namespace NBitcoin.Secp256k1
 			/* Reduce 512 bits into 385. */
 			/* m[0..12] = l[0..7] + n[0..7] * SECP256K1_N_C. */
 			acc[0] = l[0]; acc[1] = 0; acc[2] = 0;
-			muladd(acc, n[0], ncd[0]);
-			extract(acc, out m[0]);
-			sumadd(acc, l[1]);
+			muladd_fast(acc, n[0], ncd[0]);
+			extract_fast(acc, out m[0]);
+			sumadd_fast(acc, l[1]);
 			muladd(acc, n[1], ncd[0]);
 			muladd(acc, n[0], ncd[1]);
 			extract(acc, out m[1]);
@@ -226,17 +226,17 @@ namespace NBitcoin.Secp256k1
 			muladd(acc, n[7], ncd[3]);
 			sumadd(acc, n[6]);
 			extract(acc, out m[10]);
-			sumadd(acc, n[7]);
-			extract(acc, out m[11]);
+			sumadd_fast(acc, n[7]);
+			extract_fast(acc, out m[11]);
 			VERIFY_CHECK(acc[0] <= 1);
 			m[12] = acc[0];
 
 			/* Reduce 385 bits into 258. */
 			/* p[0..8] = m[0..7] + m[8..12] * SECP256K1_N_C. */
 			acc[0] = m[0]; acc[1] = 0; acc[2] = 0;
-			muladd(acc, m[8], ncd[0]);
-			extract(acc, out p[0]);
-			sumadd(acc, m[1]);
+			muladd_fast(acc, m[8], ncd[0]);
+			extract_fast(acc, out p[0]);
+			sumadd_fast(acc, m[1]);
 			muladd(acc, m[9], ncd[0]);
 			muladd(acc, m[8], ncd[1]);
 			extract(acc, out p[1]);
@@ -269,10 +269,10 @@ namespace NBitcoin.Secp256k1
 			muladd(acc, m[11], ncd[3]);
 			sumadd(acc, m[10]);
 			extract(acc, out p[6]);
-			sumadd(acc, m[7]);
-			muladd(acc, m[12], ncd[3]);
-			sumadd(acc, m[11]);
-			extract(acc, out p[7]);
+			sumadd_fast(acc, m[7]);
+			muladd_fast(acc, m[12], ncd[3]);
+			sumadd_fast(acc, m[11]);
+			extract_fast(acc, out p[7]);
 			p[8] = acc[0] + m[12];
 			VERIFY_CHECK(p[8] <= 2);
 
@@ -295,8 +295,29 @@ namespace NBitcoin.Secp256k1
 			c += p[7];
 			d[7] = (uint)c; c >>= 32;
 
+
 			/* Final reduction of r. */
 			Reduce(d, (int)c + new Scalar(d).CheckOverflow());
+		}
+
+		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static void sumadd_fast(Span<uint> acc, uint a)
+		{
+			acc[0] += (a);                 /* overflow is handled on the next line */
+			acc[1] += (acc[0] < (a)) ? 1U : 0;  /* never overflows by contract (verified the next line) */
+			VERIFY_CHECK((acc[1] != 0) | (acc[0] >= (a)));
+			VERIFY_CHECK(acc[2] == 0);
+		}
+
+		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static void extract_fast(Span<uint> acc, out uint n)
+		{
+			(n) = acc[0];
+			acc[0] = acc[1];
+			acc[1] = 0;
+			VERIFY_CHECK(acc[2] == 0);
 		}
 
 		internal int CondNegate(int flag, out Scalar r)
