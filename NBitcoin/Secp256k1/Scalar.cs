@@ -160,6 +160,8 @@ namespace NBitcoin.Secp256k1
 			ulong c;
 			Span<uint> m = stackalloc uint[13];
 			Span<uint> p = stackalloc uint[9];
+			Span<uint> ncd = stackalloc uint[DCount];
+			EC.NC.Deconstruct(ref ncd);
 
 			/* 96 bit accumulator. */
 			Span<uint> acc = stackalloc uint[3];
@@ -167,124 +169,124 @@ namespace NBitcoin.Secp256k1
 			/* Reduce 512 bits into 385. */
 			/* m[0..12] = l[0..7] + n[0..7] * SECP256K1_N_C. */
 			acc[0] = l[0]; acc[1] = 0; acc[2] = 0;
-			muladd_fast(acc, n[0], SECP256K1_N_C_0);
-			extract_fast(acc, out m[0]);
-			sumadd_fast(acc, l[1]);
-			muladd(acc, n[1], SECP256K1_N_C_0);
-			muladd(acc, n[0], SECP256K1_N_C_1);
+			muladd(acc, n[0], ncd[0]);
+			extract(acc, out m[0]);
+			sumadd(acc, l[1]);
+			muladd(acc, n[1], ncd[0]);
+			muladd(acc, n[0], ncd[1]);
 			extract(acc, out m[1]);
 			sumadd(acc, l[2]);
-			muladd(acc, n[2], SECP256K1_N_C_0);
-			muladd(acc, n[1], SECP256K1_N_C_1);
-			muladd(acc, n[0], SECP256K1_N_C_2);
+			muladd(acc, n[2], ncd[0]);
+			muladd(acc, n[1], ncd[1]);
+			muladd(acc, n[0], ncd[2]);
 			extract(acc, out m[2]);
 			sumadd(acc, l[3]);
-			muladd(acc, n[3], SECP256K1_N_C_0);
-			muladd(acc, n[2], SECP256K1_N_C_1);
-			muladd(acc, n[1], SECP256K1_N_C_2);
-			muladd(acc, n[0], SECP256K1_N_C_3);
+			muladd(acc, n[3], ncd[0]);
+			muladd(acc, n[2], ncd[1]);
+			muladd(acc, n[1], ncd[2]);
+			muladd(acc, n[0], ncd[3]);
 			extract(acc, out m[3]);
 			sumadd(acc, l[4]);
-			muladd(acc, n[4], SECP256K1_N_C_0);
-			muladd(acc, n[3], SECP256K1_N_C_1);
-			muladd(acc, n[2], SECP256K1_N_C_2);
-			muladd(acc, n[1], SECP256K1_N_C_3);
+			muladd(acc, n[4], ncd[0]);
+			muladd(acc, n[3], ncd[1]);
+			muladd(acc, n[2], ncd[2]);
+			muladd(acc, n[1], ncd[3]);
 			sumadd(acc, n[0]);
 			extract(acc, out m[4]);
 			sumadd(acc, l[5]);
-			muladd(acc, n[5], SECP256K1_N_C_0);
-			muladd(acc, n[4], SECP256K1_N_C_1);
-			muladd(acc, n[3], SECP256K1_N_C_2);
-			muladd(acc, n[2], SECP256K1_N_C_3);
+			muladd(acc, n[5], ncd[0]);
+			muladd(acc, n[4], ncd[1]);
+			muladd(acc, n[3], ncd[2]);
+			muladd(acc, n[2], ncd[3]);
 			sumadd(acc, n[1]);
 			extract(acc, out m[5]);
 			sumadd(acc, l[6]);
-			muladd(acc, n[6], SECP256K1_N_C_0);
-			muladd(acc, n[5], SECP256K1_N_C_1);
-			muladd(acc, n[4], SECP256K1_N_C_2);
-			muladd(acc, n[3], SECP256K1_N_C_3);
+			muladd(acc, n[6], ncd[0]);
+			muladd(acc, n[5], ncd[1]);
+			muladd(acc, n[4], ncd[2]);
+			muladd(acc, n[3], ncd[3]);
 			sumadd(acc, n[2]);
 			extract(acc, out m[6]);
 			sumadd(acc, l[7]);
-			muladd(acc, n[7], SECP256K1_N_C_0);
-			muladd(acc, n[6], SECP256K1_N_C_1);
-			muladd(acc, n[5], SECP256K1_N_C_2);
-			muladd(acc, n[4], SECP256K1_N_C_3);
+			muladd(acc, n[7], ncd[0]);
+			muladd(acc, n[6], ncd[1]);
+			muladd(acc, n[5], ncd[2]);
+			muladd(acc, n[4], ncd[3]);
 			sumadd(acc, n[3]);
 			extract(acc, out m[7]);
-			muladd(acc, n[7], SECP256K1_N_C_1);
-			muladd(acc, n[6], SECP256K1_N_C_2);
-			muladd(acc, n[5], SECP256K1_N_C_3);
+			muladd(acc, n[7], ncd[1]);
+			muladd(acc, n[6], ncd[2]);
+			muladd(acc, n[5], ncd[3]);
 			sumadd(acc, n[4]);
 			extract(acc, out m[8]);
-			muladd(acc, n[7], SECP256K1_N_C_2);
-			muladd(acc, n[6], SECP256K1_N_C_3);
+			muladd(acc, n[7], ncd[2]);
+			muladd(acc, n[6], ncd[3]);
 			sumadd(acc, n[5]);
 			extract(acc, out m[9]);
-			muladd(acc, n[7], SECP256K1_N_C_3);
+			muladd(acc, n[7], ncd[3]);
 			sumadd(acc, n[6]);
 			extract(acc, out m[10]);
-			sumadd_fast(acc, n[7]);
-			extract_fast(acc, out m[11]);
+			sumadd(acc, n[7]);
+			extract(acc, out m[11]);
 			VERIFY_CHECK(acc[0] <= 1);
 			m[12] = acc[0];
 
 			/* Reduce 385 bits into 258. */
 			/* p[0..8] = m[0..7] + m[8..12] * SECP256K1_N_C. */
 			acc[0] = m[0]; acc[1] = 0; acc[2] = 0;
-			muladd_fast(acc, m[8], SECP256K1_N_C_0);
-			extract_fast(acc, out p[0]);
-			sumadd_fast(acc, m[1]);
-			muladd(acc, m[9], SECP256K1_N_C_0);
-			muladd(acc, m[8], SECP256K1_N_C_1);
+			muladd(acc, m[8], ncd[0]);
+			extract(acc, out p[0]);
+			sumadd(acc, m[1]);
+			muladd(acc, m[9], ncd[0]);
+			muladd(acc, m[8], ncd[1]);
 			extract(acc, out p[1]);
 			sumadd(acc, m[2]);
-			muladd(acc, m[10], SECP256K1_N_C_0);
-			muladd(acc, m[9], SECP256K1_N_C_1);
-			muladd(acc, m[8], SECP256K1_N_C_2);
+			muladd(acc, m[10], ncd[0]);
+			muladd(acc, m[9], ncd[1]);
+			muladd(acc, m[8], ncd[2]);
 			extract(acc, out p[2]);
 			sumadd(acc, m[3]);
-			muladd(acc, m[11], SECP256K1_N_C_0);
-			muladd(acc, m[10], SECP256K1_N_C_1);
-			muladd(acc, m[9], SECP256K1_N_C_2);
-			muladd(acc, m[8], SECP256K1_N_C_3);
+			muladd(acc, m[11], ncd[0]);
+			muladd(acc, m[10], ncd[1]);
+			muladd(acc, m[9], ncd[2]);
+			muladd(acc, m[8], ncd[3]);
 			extract(acc, out p[3]);
 			sumadd(acc, m[4]);
-			muladd(acc, m[12], SECP256K1_N_C_0);
-			muladd(acc, m[11], SECP256K1_N_C_1);
-			muladd(acc, m[10], SECP256K1_N_C_2);
-			muladd(acc, m[9], SECP256K1_N_C_3);
+			muladd(acc, m[12], ncd[0]);
+			muladd(acc, m[11], ncd[1]);
+			muladd(acc, m[10], ncd[2]);
+			muladd(acc, m[9], ncd[3]);
 			sumadd(acc, m[8]);
 			extract(acc, out p[4]);
 			sumadd(acc, m[5]);
-			muladd(acc, m[12], SECP256K1_N_C_1);
-			muladd(acc, m[11], SECP256K1_N_C_2);
-			muladd(acc, m[10], SECP256K1_N_C_3);
+			muladd(acc, m[12], ncd[1]);
+			muladd(acc, m[11], ncd[2]);
+			muladd(acc, m[10], ncd[3]);
 			sumadd(acc, m[9]);
 			extract(acc, out p[5]);
 			sumadd(acc, m[6]);
-			muladd(acc, m[12], SECP256K1_N_C_2);
-			muladd(acc, m[11], SECP256K1_N_C_3);
+			muladd(acc, m[12], ncd[2]);
+			muladd(acc, m[11], ncd[3]);
 			sumadd(acc, m[10]);
 			extract(acc, out p[6]);
-			sumadd_fast(acc, m[7]);
-			muladd_fast(acc, m[12], SECP256K1_N_C_3);
-			sumadd_fast(acc, m[11]);
-			extract_fast(acc, out p[7]);
-			p[8]= acc[0] + m[12];
-			VERIFY_CHECK(p[8]<= 2);
+			sumadd(acc, m[7]);
+			muladd(acc, m[12], ncd[3]);
+			sumadd(acc, m[11]);
+			extract(acc, out p[7]);
+			p[8] = acc[0] + m[12];
+			VERIFY_CHECK(p[8] <= 2);
 
 			/* Reduce 258 bits into 256. */
 			/* r[0..7] = p[0..7] + p[8] * SECP256K1_N_C. */
-			c = p[0]+ (ulong)SECP256K1_N_C_0 * p[8];
+			c = p[0] + (ulong)ncd[0] * p[8];
 			d[0] = (uint)c; c >>= 32;
-			c += p[1]+ (ulong)SECP256K1_N_C_1 * p[8];
+			c += p[1] + (ulong)ncd[1] * p[8];
 			d[1] = (uint)c; c >>= 32;
-			c += p[2]+ (ulong)SECP256K1_N_C_2 * p[8];
+			c += p[2] + (ulong)ncd[2] * p[8];
 			d[2] = (uint)c; c >>= 32;
-			c += p[3]+ (ulong)SECP256K1_N_C_3 * p[8];
+			c += p[3] + (ulong)ncd[3] * p[8];
 			d[3] = (uint)c; c >>= 32;
-			c += p[4]+ (ulong)p[8];
+			c += p[4] + (ulong)p[8];
 			d[4] = (uint)c; c >>= 32;
 			c += p[5];
 			d[5] = (uint)c; c >>= 32;
@@ -392,10 +394,8 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 		private const ulong M = 0xFFFFFFFFUL;
-		internal static void sqr_512(Span<uint> zz, in Scalar a)
+		internal static void sqr_512(Span<uint> zz, Span<uint> x)
 		{
-			Span<uint> x = stackalloc uint[DCount];
-			a.Deconstruct(ref x);
 			ulong x_0 = x[0];
 			ulong zz_1;
 
@@ -589,28 +589,6 @@ namespace NBitcoin.Secp256k1
 			c[1] += th;                 /* never overflows by contract (verified in the next line) */
 			VERIFY_CHECK(c[1] >= th);
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void muladd2(Span<uint> c, uint a, uint b)
-		{
-			uint tl, th, th2, tl2;
-			{
-				ulong t = (ulong)a * b;
-				th = (uint)(t >> 32);               /* at most 0xFFFFFFFE */
-				tl = (uint)t;
-			}
-			th2 = th + th;                  /* at most 0xFFFFFFFE (in case th was 0x7FFFFFFF) */
-			c[2] += (th2 < th) ? 1U : 0;       /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((th2 >= th) || (c[2] != 0));
-			tl2 = tl + tl;                  /* at most 0xFFFFFFFE (in case the lowest 63 bits of tl were 0x7FFFFFFF) */
-			th2 += (tl2 < tl) ? 1U : 0;      /* at most 0xFFFFFFFF */
-			c[0] += tl2;                      /* overflow is handled on the next line */
-			th2 += (c[0] < tl2) ? 1U : 0;      /* second overflow is handled on the next line */
-			c[2] += (c[0] < tl2 ? 1U : 0) & (th2 == 0 ? 1U : 0);  /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c[0] >= tl2) || (th2 != 0) || (c[2] != 0));
-			c[1] += th2;                      /* overflow is handled on the next line */
-			c[2] += (c[1] < th2) ? 1U : 0;       /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((c[1] >= th2) || (c[2] != 0));
-		}
 
 		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -621,16 +599,6 @@ namespace NBitcoin.Secp256k1
 			over = (acc[0] < (a)) ? 1U : 0;
 			acc[1] += over;                 /* overflow is handled on the next line */
 			acc[2] += (acc[1] < over) ? 1U : 0;  /* never overflows by contract */
-		}
-
-		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void sumadd_fast(Span<uint> acc, uint a)
-		{
-			acc[0] += (a);                 /* overflow is handled on the next line */
-			acc[1] += (acc[0] < (a)) ? 1U : 0;  /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((acc[1] != 0) | (acc[0] >= (a)));
-			VERIFY_CHECK(acc[2] == 0);
 		}
 		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly Scalar Add(in Scalar b)
@@ -671,15 +639,6 @@ namespace NBitcoin.Secp256k1
 			acc[0] = acc[1];
 			acc[1] = acc[2];
 			acc[2] = 0;
-		}
-		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void extract_fast(Span<uint> acc, out uint n)
-		{
-			(n) = acc[0];
-			acc[0] = acc[1];
-			acc[1] = 0;
-			VERIFY_CHECK(acc[2] == 0);
 		}
 
 		[Conditional("SECP256K1_VERIFY")]
@@ -943,11 +902,18 @@ namespace NBitcoin.Secp256k1
 		const int DCount = 8;
 		public readonly Scalar Sqr()
 		{
+			return Sqr(1);
+		}
+		public readonly Scalar Sqr(int times)
+		{
+			Span<uint> l = stackalloc uint[16];
 			Span<uint> d = stackalloc uint[DCount];
 			Deconstruct(ref d);
-			Span<uint> l = stackalloc uint[16];
-			sqr_512(l, this);
-			reduce_512(d, l);
+			for (int i = 0; i < times; i++)
+			{
+				sqr_512(l, d);
+				reduce_512(d, l);
+			}
 			return new Scalar(d);
 		}
 
@@ -978,162 +944,76 @@ namespace NBitcoin.Secp256k1
 			x8 = x8 * x2;
 
 			x14 = x8.Sqr();
-			for (i = 0; i < 5; i++)
-			{
-				x14 = x14.Sqr();
-			}
+			x14 = x14.Sqr(5);
 			x14 = x14 * x6;
 
 			x28 = x14.Sqr();
-			for (i = 0; i < 13; i++)
-			{
-				x28 = x28.Sqr();
-			}
+			x28 = x28.Sqr(13);
 			x28 = x28 * x14;
 
 			x56 = x28.Sqr();
-			for (i = 0; i < 27; i++)
-			{
-				x56 = x56.Sqr();
-			}
+			x56 = x56.Sqr(27);
 			x56 = x56 * x28;
 
 			x112 = x56.Sqr();
-			for (i = 0; i < 55; i++)
-			{
-				x112 = x112.Sqr();
-			}
+			x112 = x112.Sqr(55);
 			x112 = x112 * x56;
 
 			x126 = x112.Sqr();
-			for (i = 0; i < 13; i++)
-			{
-				x126 = x126.Sqr();
-			}
+			x126 = x126.Sqr(13);
 			x126 = x126 * x14;
 
 			/* Then accumulate the final result (t starts at x126). */
 			ref Scalar t = ref x126;
-			for (i = 0; i < 3; i++)
-			{
-				t = t.Sqr();
-			}
+			t = t.Sqr(3);
 			t = t * u5; /* 101 */
-			for (i = 0; i < 4; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * x3; /* 111 */
-			for (i = 0; i < 4; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * u5; /* 101 */
-			for (i = 0; i < 5; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(5);
 			t = t * u11; /* 1011 */
-			for (i = 0; i < 4; i++)
-			{
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * u11; /* 1011 */
-			for (i = 0; i < 4; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * x3; /* 111 */
-			for (i = 0; i < 5; i++)
-			{ /* 00 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(5);
 			t = t * x3; /* 111 */
-			for (i = 0; i < 6; i++)
-			{ /* 00 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(6);
 			t = t * u13; /* 1101 */
-			for (i = 0; i < 4; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * u5; /* 101 */
-			for (i = 0; i < 3; i++)
-			{
-				t = t.Sqr();
-			}
+			t = t.Sqr(3);
 			t = t * x3; /* 111 */
-			for (i = 0; i < 5; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(5);
 			t = t * u9; /* 1001 */
-			for (i = 0; i < 6; i++)
-			{ /* 000 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(6);
 			t = t * u5; /* 101 */
-			for (i = 0; i < 10; i++)
-			{ /* 0000000 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(10);
 			t = t * x3; /* 111 */
-			for (i = 0; i < 4; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * x3; /* 111 */
-			for (i = 0; i < 9; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(9);
 			t = t * x8; /* 11111111 */
-			for (i = 0; i < 5; i++)
-			{ /* 0 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(5);
 			t = t * u9; /* 1001 */
-			for (i = 0; i < 6; i++)
-			{ /* 00 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(6);
 			t = t * u11; /* 1011 */
-			for (i = 0; i < 4; i++)
-			{
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * u13; /* 1101 */
-			for (i = 0; i < 5; i++)
-			{
-				t = t.Sqr();
-			}
+			t = t.Sqr(5);
 			t = t * x2; /* 11 */
-			for (i = 0; i < 6; i++)
-			{ /* 00 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(6);
 			t = t * u13; /* 1101 */
-			for (i = 0; i < 10; i++)
-			{ /* 000000 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(10);
 			t = t * u13; /* 1101 */
-			for (i = 0; i < 4; i++)
-			{
-				t = t.Sqr();
-			}
+			t = t.Sqr(4);
 			t = t * u9; /* 1001 */
-			for (i = 0; i < 6; i++)
-			{ /* 00000 */
-				t = t.Sqr();
-			}
+			/* 00000 */
+			t = t.Sqr(6);
 
 			t = t * x; /* 1 */
-			for (i = 0; i < 8; i++)
-			{ /* 00 */
-				t = t.Sqr();
-			}
+			t = t.Sqr(8);
 			r = t * x6; /* 111111 */
 			return r;
 		}
@@ -1228,7 +1108,7 @@ namespace NBitcoin.Secp256k1
 		public readonly void Deconstruct(
 				ref Span<uint> d)
 		{
-			d[0]= this.d0;
+			d[0] = this.d0;
 			d[1] = this.d1;
 			d[2] = this.d2;
 			d[3] = this.d3;
