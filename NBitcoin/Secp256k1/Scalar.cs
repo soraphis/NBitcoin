@@ -310,7 +310,7 @@ namespace NBitcoin.Secp256k1
 			d[7] = (uint)c; c >>= 32;
 
 			/* Final reduction of r. */
-			Reduce(d, (int)c + new Scalar(d).CheckOverflow());
+			Reduce(d, (int)c + CheckOverflow(d));
 		}
 
 		internal int CondNegate(int flag, out Scalar r)
@@ -520,7 +520,7 @@ namespace NBitcoin.Secp256k1
 			d[6] = (uint)t; t >>= 32;
 			t += (ulong)a.d7 + b.d7;
 			d[7] = (uint)t; t >>= 32;
-			overflow = (int)(t + (uint)new Scalar(d).CheckOverflow());
+			overflow = (int)(t + (uint)CheckOverflow(d));
 			VERIFY_CHECK(overflow == 0 || overflow == 1);
 			Reduce(d, overflow);
 			return new Scalar(d);
@@ -550,7 +550,6 @@ namespace NBitcoin.Secp256k1
 			}
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		internal readonly int CheckOverflow()
 		{
 			int yes = 0;
@@ -567,6 +566,24 @@ namespace NBitcoin.Secp256k1
 			no |= (d1 < SECP256K1_N_1 ? 1 : 0) & ~yes;
 			yes |= (d1 > SECP256K1_N_1 ? 1 : 0) & ~no;
 			yes |= (d0 >= SECP256K1_N_0 ? 1 : 0) & ~no;
+			return yes;
+		}
+		static int CheckOverflow(Span<uint> d)
+		{
+			int yes = 0;
+			int no = 0;
+			no |= (d[7] < SECP256K1_N_7 ? 1 : 0);
+			no |= (d[6] < SECP256K1_N_6 ? 1 : 0);
+			no |= (d[5] < SECP256K1_N_5 ? 1 : 0);
+			no |= (d[4] < SECP256K1_N_4 ? 1 : 0);
+			yes |= (d[4] > SECP256K1_N_4 ? 1 : 0) & ~no;
+			no |= (d[3] < SECP256K1_N_3 ? 1 : 0) & ~yes;
+			yes |= (d[3] > SECP256K1_N_3 ? 1 : 0) & ~no;
+			no |= (d[2] < SECP256K1_N_2 ? 1 : 0) & ~yes;
+			yes |= (d[2] > SECP256K1_N_2 ? 1 : 0) & ~no;
+			no |= (d[1] < SECP256K1_N_1 ? 1 : 0) & ~yes;
+			yes |= (d[1] > SECP256K1_N_1 ? 1 : 0) & ~no;
+			yes |= (d[0] >= SECP256K1_N_0 ? 1 : 0) & ~no;
 			return yes;
 		}
 

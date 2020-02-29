@@ -180,80 +180,47 @@ namespace NBitcoin.Secp256k1
 			x3 = x3 * a;
 
 			x6 = x3;
-			for (j = 0; j < 3; j++)
-			{
-				x6 = x6.Sqr();
-			}
+			x6 = x6.Sqr(3);
 			x6 = x6 * x3;
 
 			x9 = x6;
-			for (j = 0; j < 3; j++)
-			{
-				x9 = x9.Sqr();
-			}
+			x9 = x9.Sqr(3);
 			x9 = x9 * x3;
 
 			x11 = x9;
-			for (j = 0; j < 2; j++)
-			{
-				x11 = x11.Sqr();
-			}
+			x11 = x11.Sqr(2);
 			x11 = x11 * x2;
 
 			x22 = x11;
-			for (j = 0; j < 11; j++)
-			{
-				x22 = x22.Sqr();
-			}
+			x22 = x22.Sqr(11);
 			x22 = x22 * x11;
 
 			x44 = x22;
-			for (j = 0; j < 22; j++)
-			{
-				x44 = x44.Sqr();
-			}
+			x44 = x44.Sqr(22);
 			x44 = x44 * x22;
 
 			x88 = x44;
-			for (j = 0; j < 44; j++)
-			{
-				x88 = x88.Sqr();
-			}
+			x88 = x88.Sqr(44);
 			x88 = x88 * x44;
 
 			x176 = x88;
-			for (j = 0; j < 88; j++)
-			{
-				x176 = x176.Sqr();
-			}
+			x176 = x176.Sqr(88);
 			x176 = x176 * x88;
 
 			x220 = x176;
-			for (j = 0; j < 44; j++)
-			{
-				x220 = x220.Sqr();
-			}
+			x220 = x220.Sqr(44);
 			x220 = x220 * x44;
 
 			x223 = x220;
-			for (j = 0; j < 3; j++)
-			{
-				x223 = x223.Sqr();
-			}
+			x223 = x223.Sqr(3);
 			x223 = x223 * x3;
 
 			/* The final result is then assembled using a sliding window over the blocks. */
 
 			t1 = x223;
-			for (j = 0; j < 23; j++)
-			{
-				t1 = t1.Sqr();
-			}
+			t1 = t1.Sqr(23);
 			t1 = t1 * x22;
-			for (j = 0; j < 6; j++)
-			{
-				t1 = t1.Sqr();
-			}
+			t1 = t1.Sqr(6);
 			t1 = t1 * x2;
 			t1 = t1.Sqr();
 			result = t1.Sqr();
@@ -390,7 +357,7 @@ namespace NBitcoin.Secp256k1
 			t1 = x223;
 			t1 = t1.Sqr(23);
 			t1 = t1 * x22;
-			
+
 			t1 = t1.Sqr(5);
 			t1 = t1 * a;
 			t1 = t1.Sqr(3);
@@ -755,7 +722,7 @@ namespace NBitcoin.Secp256k1
 			r.VERIFY();
 			return r;
 		}
-		
+
 		public readonly FieldElement Add(in FieldElement a)
 		{
 			a.VERIFY();
@@ -778,7 +745,7 @@ namespace NBitcoin.Secp256k1
 		internal const int NCount = 10;
 		private readonly FieldElement secp256k1_fe_mul_inner(in FieldElement b, int magnitude, bool normalized)
 		{
-			
+
 			ref readonly FieldElement a = ref this;
 			Span<uint> n = stackalloc uint[NCount];
 			ulong c, d;
