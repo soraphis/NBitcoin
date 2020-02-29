@@ -8,6 +8,21 @@ namespace NBitcoin.Secp256k1
 {
 	readonly struct Scalar : IEquatable<Scalar>
 	{
+		// We ported secp256k1 code via the following regex
+		//muladd_fast\((.*), (.*)\);
+		//v = (ulong)$1 * $2;acc0 += v;VERIFY_CHECK(acc0 >= v); // muladd_fast($1, $2);
+		//muladd\((.*), (.*)\);
+		//v = (ulong)$1 * $2;acc0 += v;acc1 += (acc0 < v) ? 1U : 0;VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd($1, $2);
+		//extract_fast\((.*)\);
+		//$1 = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out $1);
+		//extract\((.*)\);
+		//$1 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out $1);
+		//sumadd_fast\((.*)\);
+		//acc0 += $1; VERIFY_CHECK(((acc0 >> 32) != 0) | ((uint)acc0 >= $1)); VERIFY_CHECK(acc1 == 0); // sumadd_fast($1);
+		//sumadd\((.*)\);
+		//acc0 += $1; acc1 += (acc0 < $1) ? 1U : 0; // sumadd_fast($1);
+		//muladd2\((.*), (.*)\);
+		//v = (ulong)$1 * $2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2($1, $2);
 		static readonly Scalar _Zero = new Scalar(0, 0, 0, 0, 0, 0, 0, 0);
 		public static ref readonly Scalar Zero => ref _Zero;
 		static readonly Scalar _One = new Scalar(1, 0, 0, 0, 0, 0, 0, 0);
@@ -155,169 +170,147 @@ namespace NBitcoin.Secp256k1
 
 		private static void reduce_512(Span<uint> d, Span<uint> l)
 		{
-			Span<uint> n = stackalloc uint[DCount];
-			l.Slice(8).CopyTo(n);
 			ulong c;
-			Span<uint> m = stackalloc uint[13];
-			Span<uint> p = stackalloc uint[9];
-			Span<uint> ncd = stackalloc uint[DCount];
-			EC.NC.Deconstruct(ref ncd);
+			ulong v;
+			uint n0 = l[8], n1 = l[9], n2 = l[10], n3 = l[11], n4 = l[12], n5 = l[13], n6 = l[14], n7 = l[15];
+			uint m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12;
+			uint p0, p1, p2, p3, p4, p5, p6, p7, p8;
 
-			/* 96 bit accumulator. */
-			Span<uint> acc = stackalloc uint[3];
+			/* 160 bit accumulator. */
+			ulong acc0;
+			uint acc1 = 0;
 
 			/* Reduce 512 bits into 385. */
 			/* m[0..12] = l[0..7] + n[0..7] * SECP256K1_N_C. */
-			acc[0] = l[0]; acc[1] = 0; acc[2] = 0;
-			muladd_fast(acc, n[0], ncd[0]);
-			extract_fast(acc, out m[0]);
-			sumadd_fast(acc, l[1]);
-			muladd(acc, n[1], ncd[0]);
-			muladd(acc, n[0], ncd[1]);
-			extract(acc, out m[1]);
-			sumadd(acc, l[2]);
-			muladd(acc, n[2], ncd[0]);
-			muladd(acc, n[1], ncd[1]);
-			muladd(acc, n[0], ncd[2]);
-			extract(acc, out m[2]);
-			sumadd(acc, l[3]);
-			muladd(acc, n[3], ncd[0]);
-			muladd(acc, n[2], ncd[1]);
-			muladd(acc, n[1], ncd[2]);
-			muladd(acc, n[0], ncd[3]);
-			extract(acc, out m[3]);
-			sumadd(acc, l[4]);
-			muladd(acc, n[4], ncd[0]);
-			muladd(acc, n[3], ncd[1]);
-			muladd(acc, n[2], ncd[2]);
-			muladd(acc, n[1], ncd[3]);
-			sumadd(acc, n[0]);
-			extract(acc, out m[4]);
-			sumadd(acc, l[5]);
-			muladd(acc, n[5], ncd[0]);
-			muladd(acc, n[4], ncd[1]);
-			muladd(acc, n[3], ncd[2]);
-			muladd(acc, n[2], ncd[3]);
-			sumadd(acc, n[1]);
-			extract(acc, out m[5]);
-			sumadd(acc, l[6]);
-			muladd(acc, n[6], ncd[0]);
-			muladd(acc, n[5], ncd[1]);
-			muladd(acc, n[4], ncd[2]);
-			muladd(acc, n[3], ncd[3]);
-			sumadd(acc, n[2]);
-			extract(acc, out m[6]);
-			sumadd(acc, l[7]);
-			muladd(acc, n[7], ncd[0]);
-			muladd(acc, n[6], ncd[1]);
-			muladd(acc, n[5], ncd[2]);
-			muladd(acc, n[4], ncd[3]);
-			sumadd(acc, n[3]);
-			extract(acc, out m[7]);
-			muladd(acc, n[7], ncd[1]);
-			muladd(acc, n[6], ncd[2]);
-			muladd(acc, n[5], ncd[3]);
-			sumadd(acc, n[4]);
-			extract(acc, out m[8]);
-			muladd(acc, n[7], ncd[2]);
-			muladd(acc, n[6], ncd[3]);
-			sumadd(acc, n[5]);
-			extract(acc, out m[9]);
-			muladd(acc, n[7], ncd[3]);
-			sumadd(acc, n[6]);
-			extract(acc, out m[10]);
-			sumadd_fast(acc, n[7]);
-			extract_fast(acc, out m[11]);
-			VERIFY_CHECK(acc[0] <= 1);
-			m[12] = acc[0];
+			acc0 = l[0];
+			v = (ulong)n0 * SECP256K1_N_C_0; acc0 += v; VERIFY_CHECK(acc0 >= v); // muladd_fast(n0, SECP256K1_N_C_0);
+			m0 = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out m0);
+			acc0 += l[1]; VERIFY_CHECK(((acc0 >> 32) != 0) | ((uint)acc0 >= l[1])); VERIFY_CHECK(acc1 == 0); // sumadd_fast(l[1]);
+			v = (ulong)n1 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n1, SECP256K1_N_C_0);
+			v = (ulong)n0 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n0, SECP256K1_N_C_1);
+			m1 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m1);
+			acc0 += l[2]; acc1 += (acc0 < l[2]) ? 1U : 0; // sumadd_fast(l[2]);
+			v = (ulong)n2 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n2, SECP256K1_N_C_0);
+			v = (ulong)n1 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n1, SECP256K1_N_C_1);
+			v = (ulong)n0 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n0, SECP256K1_N_C_2);
+			m2 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m2);
+			acc0 += l[3]; acc1 += (acc0 < l[3]) ? 1U : 0; // sumadd_fast(l[3]);
+			v = (ulong)n3 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n3, SECP256K1_N_C_0);
+			v = (ulong)n2 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n2, SECP256K1_N_C_1);
+			v = (ulong)n1 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n1, SECP256K1_N_C_2);
+			v = (ulong)n0 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n0, SECP256K1_N_C_3);
+			m3 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m3);
+			acc0 += l[4]; acc1 += (acc0 < l[4]) ? 1U : 0; // sumadd_fast(l[4]);
+			v = (ulong)n4 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n4, SECP256K1_N_C_0);
+			v = (ulong)n3 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n3, SECP256K1_N_C_1);
+			v = (ulong)n2 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n2, SECP256K1_N_C_2);
+			v = (ulong)n1 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n1, SECP256K1_N_C_3);
+			acc0 += n0; acc1 += (acc0 < n0) ? 1U : 0; // sumadd_fast(n0);
+			m4 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m4);
+			acc0 += l[5]; acc1 += (acc0 < l[5]) ? 1U : 0; // sumadd_fast(l[5]);
+			v = (ulong)n5 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n5, SECP256K1_N_C_0);
+			v = (ulong)n4 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n4, SECP256K1_N_C_1);
+			v = (ulong)n3 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n3, SECP256K1_N_C_2);
+			v = (ulong)n2 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n2, SECP256K1_N_C_3);
+			acc0 += n1; acc1 += (acc0 < n1) ? 1U : 0; // sumadd_fast(n1);
+			m5 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m5);
+			acc0 += l[6]; acc1 += (acc0 < l[6]) ? 1U : 0; // sumadd_fast(l[6]);
+			v = (ulong)n6 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n6, SECP256K1_N_C_0);
+			v = (ulong)n5 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n5, SECP256K1_N_C_1);
+			v = (ulong)n4 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n4, SECP256K1_N_C_2);
+			v = (ulong)n3 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n3, SECP256K1_N_C_3);
+			acc0 += n2; acc1 += (acc0 < n2) ? 1U : 0; // sumadd_fast(n2);
+			m6 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m6);
+			acc0 += l[7]; acc1 += (acc0 < l[7]) ? 1U : 0; // sumadd_fast(l[7]);
+			v = (ulong)n7 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n7, SECP256K1_N_C_0);
+			v = (ulong)n6 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n6, SECP256K1_N_C_1);
+			v = (ulong)n5 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n5, SECP256K1_N_C_2);
+			v = (ulong)n4 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n4, SECP256K1_N_C_3);
+			acc0 += n3; acc1 += (acc0 < n3) ? 1U : 0; // sumadd_fast(n3);
+			m7 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m7);
+			v = (ulong)n7 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n7, SECP256K1_N_C_1);
+			v = (ulong)n6 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n6, SECP256K1_N_C_2);
+			v = (ulong)n5 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n5, SECP256K1_N_C_3);
+			acc0 += n4; acc1 += (acc0 < n4) ? 1U : 0; // sumadd_fast(n4);
+			m8 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m8);
+			v = (ulong)n7 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n7, SECP256K1_N_C_2);
+			v = (ulong)n6 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n6, SECP256K1_N_C_3);
+			acc0 += n5; acc1 += (acc0 < n5) ? 1U : 0; // sumadd_fast(n5);
+			m9 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m9);
+			v = (ulong)n7 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(n7, SECP256K1_N_C_3);
+			acc0 += n6; acc1 += (acc0 < n6) ? 1U : 0; // sumadd_fast(n6);
+			m10 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out m10);
+			acc0 += n7; VERIFY_CHECK(((acc0 >> 32) != 0) | ((uint)acc0 >= n7)); VERIFY_CHECK(acc1 == 0); // sumadd_fast(n7);
+			m11 = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out m11);
+			VERIFY_CHECK((uint)acc0 <= 1);
+			m12 = (uint)acc0;
 
 			/* Reduce 385 bits into 258. */
 			/* p[0..8] = m[0..7] + m[8..12] * SECP256K1_N_C. */
-			acc[0] = m[0]; acc[1] = 0; acc[2] = 0;
-			muladd_fast(acc, m[8], ncd[0]);
-			extract_fast(acc, out p[0]);
-			sumadd_fast(acc, m[1]);
-			muladd(acc, m[9], ncd[0]);
-			muladd(acc, m[8], ncd[1]);
-			extract(acc, out p[1]);
-			sumadd(acc, m[2]);
-			muladd(acc, m[10], ncd[0]);
-			muladd(acc, m[9], ncd[1]);
-			muladd(acc, m[8], ncd[2]);
-			extract(acc, out p[2]);
-			sumadd(acc, m[3]);
-			muladd(acc, m[11], ncd[0]);
-			muladd(acc, m[10], ncd[1]);
-			muladd(acc, m[9], ncd[2]);
-			muladd(acc, m[8], ncd[3]);
-			extract(acc, out p[3]);
-			sumadd(acc, m[4]);
-			muladd(acc, m[12], ncd[0]);
-			muladd(acc, m[11], ncd[1]);
-			muladd(acc, m[10], ncd[2]);
-			muladd(acc, m[9], ncd[3]);
-			sumadd(acc, m[8]);
-			extract(acc, out p[4]);
-			sumadd(acc, m[5]);
-			muladd(acc, m[12], ncd[1]);
-			muladd(acc, m[11], ncd[2]);
-			muladd(acc, m[10], ncd[3]);
-			sumadd(acc, m[9]);
-			extract(acc, out p[5]);
-			sumadd(acc, m[6]);
-			muladd(acc, m[12], ncd[2]);
-			muladd(acc, m[11], ncd[3]);
-			sumadd(acc, m[10]);
-			extract(acc, out p[6]);
-			sumadd_fast(acc, m[7]);
-			muladd_fast(acc, m[12], ncd[3]);
-			sumadd_fast(acc, m[11]);
-			extract_fast(acc, out p[7]);
-			p[8] = acc[0] + m[12];
-			VERIFY_CHECK(p[8] <= 2);
+			acc0 = m0; acc1 = 0;
+			v = (ulong)m8 * SECP256K1_N_C_0; acc0 += v; VERIFY_CHECK(acc0 >= v); // muladd_fast(m8, SECP256K1_N_C_0);
+			p0 = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out p0);
+			acc0 += m1; VERIFY_CHECK(((acc0 >> 32) != 0) | ((uint)acc0 >= m1)); VERIFY_CHECK(acc1 == 0); // sumadd_fast(m1);
+			v = (ulong)m9 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m9, SECP256K1_N_C_0);
+			v = (ulong)m8 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m8, SECP256K1_N_C_1);
+			p1 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out p1);
+			acc0 += m2; acc1 += (acc0 < m2) ? 1U : 0; // sumadd_fast(m2);
+			v = (ulong)m10 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m10, SECP256K1_N_C_0);
+			v = (ulong)m9 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m9, SECP256K1_N_C_1);
+			v = (ulong)m8 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m8, SECP256K1_N_C_2);
+			p2 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out p2);
+			acc0 += m3; acc1 += (acc0 < m3) ? 1U : 0; // sumadd_fast(m3);
+			v = (ulong)m11 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m11, SECP256K1_N_C_0);
+			v = (ulong)m10 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m10, SECP256K1_N_C_1);
+			v = (ulong)m9 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m9, SECP256K1_N_C_2);
+			v = (ulong)m8 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m8, SECP256K1_N_C_3);
+			p3 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out p3);
+			acc0 += m4; acc1 += (acc0 < m4) ? 1U : 0; // sumadd_fast(m4);
+			v = (ulong)m12 * SECP256K1_N_C_0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m12, SECP256K1_N_C_0);
+			v = (ulong)m11 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m11, SECP256K1_N_C_1);
+			v = (ulong)m10 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m10, SECP256K1_N_C_2);
+			v = (ulong)m9 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m9, SECP256K1_N_C_3);
+			acc0 += m8; acc1 += (acc0 < m8) ? 1U : 0; // sumadd_fast(m8);
+			p4 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out p4);
+			acc0 += m5; acc1 += (acc0 < m5) ? 1U : 0; // sumadd_fast(m5);
+			v = (ulong)m12 * SECP256K1_N_C_1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m12, SECP256K1_N_C_1);
+			v = (ulong)m11 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m11, SECP256K1_N_C_2);
+			v = (ulong)m10 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m10, SECP256K1_N_C_3);
+			acc0 += m9; acc1 += (acc0 < m9) ? 1U : 0; // sumadd_fast(m9);
+			p5 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out p5);
+			acc0 += m6; acc1 += (acc0 < m6) ? 1U : 0; // sumadd_fast(m6);
+			v = (ulong)m12 * SECP256K1_N_C_2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m12, SECP256K1_N_C_2);
+			v = (ulong)m11 * SECP256K1_N_C_3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(m11, SECP256K1_N_C_3);
+			acc0 += m10; acc1 += (acc0 < m10) ? 1U : 0; // sumadd_fast(m10);
+			p6 = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out p6);
+			acc0 += m7; VERIFY_CHECK(((acc0 >> 32) != 0) | ((uint)acc0 >= m7)); VERIFY_CHECK(acc1 == 0); // sumadd_fast(m7);
+			v = (ulong)m12 * SECP256K1_N_C_3; acc0 += v; VERIFY_CHECK(acc0 >= v); // muladd_fast(m12, SECP256K1_N_C_3);
+			acc0 += m11; VERIFY_CHECK(((acc0 >> 32) != 0) | ((uint)acc0 >= m11)); VERIFY_CHECK(acc1 == 0); // sumadd_fast(m11);
+			p7 = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out p7);
+			p8 = (uint)acc0 + m12;
+			VERIFY_CHECK(p8 <= 2);
 
 			/* Reduce 258 bits into 256. */
 			/* r[0..7] = p[0..7] + p[8] * SECP256K1_N_C. */
-			c = p[0] + (ulong)ncd[0] * p[8];
+			c = p0 + (ulong)SECP256K1_N_C_0 * p8;
 			d[0] = (uint)c; c >>= 32;
-			c += p[1] + (ulong)ncd[1] * p[8];
+			c += p1 + (ulong)SECP256K1_N_C_1 * p8;
 			d[1] = (uint)c; c >>= 32;
-			c += p[2] + (ulong)ncd[2] * p[8];
+			c += p2 + (ulong)SECP256K1_N_C_2 * p8;
 			d[2] = (uint)c; c >>= 32;
-			c += p[3] + (ulong)ncd[3] * p[8];
+			c += p3 + (ulong)SECP256K1_N_C_3 * p8;
 			d[3] = (uint)c; c >>= 32;
-			c += p[4] + (ulong)p[8];
+			c += p4 + (ulong)p8;
 			d[4] = (uint)c; c >>= 32;
-			c += p[5];
+			c += p5;
 			d[5] = (uint)c; c >>= 32;
-			c += p[6];
+			c += p6;
 			d[6] = (uint)c; c >>= 32;
-			c += p[7];
+			c += p7;
 			d[7] = (uint)c; c >>= 32;
-
 
 			/* Final reduction of r. */
 			Reduce(d, (int)c + new Scalar(d).CheckOverflow());
-		}
-
-		/** Add a to the number defined by (c0,c1). c1 must never overflow, c2 must be zero. */
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void sumadd_fast(Span<uint> acc, uint a)
-		{
-			acc[0] += (a);                 /* overflow is handled on the next line */
-			acc[1] += (acc[0] < (a)) ? 1U : 0;  /* never overflows by contract (verified the next line) */
-			VERIFY_CHECK((acc[1] != 0) | (acc[0] >= (a)));
-			VERIFY_CHECK(acc[2] == 0);
-		}
-
-		/** Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits. c2 is required to be zero. */
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void extract_fast(Span<uint> acc, out uint n)
-		{
-			(n) = acc[0];
-			acc[0] = acc[1];
-			acc[1] = 0;
-			VERIFY_CHECK(acc[2] == 0);
 		}
 
 		internal int CondNegate(int flag, out Scalar r)
@@ -348,285 +341,165 @@ namespace NBitcoin.Secp256k1
 			return 2 * (mask == 0 ? 1 : 0) - 1;
 		}
 
-		private static void mul_512(Span<uint> zz, in Scalar a, in Scalar b)
+		private static void mul_512(Span<uint> l, in Scalar a, in Scalar b)
 		{
-			Span<uint> x = stackalloc uint[DCount];
-			a.Deconstruct(ref x);
-			Span<uint> y = stackalloc uint[DCount];
-			b.Deconstruct(ref y);
+			/* 160 bit accumulator. */
+			ulong v;
+			ulong acc0 = 0;
+			uint acc1 = 0;
 
-			{
-				ulong c = 0, x_0 = x[0];
-				c += x_0 * y[0];
-				zz[0] = (uint)c;
-				c >>= 32;
-				c += x_0 * y[1];
-				zz[1] = (uint)c;
-				c >>= 32;
-				c += x_0 * y[2];
-				zz[2] = (uint)c;
-				c >>= 32;
-				c += x_0 * y[3];
-				zz[3] = (uint)c;
-				c >>= 32;
-				c += x_0 * y[4];
-				zz[4] = (uint)c;
-				c >>= 32;
-				c += x_0 * y[5];
-				zz[5] = (uint)c;
-				c >>= 32;
-				c += x_0 * y[6];
-				zz[6] = (uint)c;
-				c >>= 32;
-				c += x_0 * y[7];
-				zz[7] = (uint)c;
-				c >>= 32;
-				zz[8] = (uint)c;
-			}
-
-			for (int i = 1; i < 8; ++i)
-			{
-				ulong c = 0, x_i = x[i];
-				c += x_i * y[0] + zz[i + 0];
-				zz[i + 0] = (uint)c;
-				c >>= 32;
-				c += x_i * y[1] + zz[i + 1];
-				zz[i + 1] = (uint)c;
-				c >>= 32;
-				c += x_i * y[2] + zz[i + 2];
-				zz[i + 2] = (uint)c;
-				c >>= 32;
-				c += x_i * y[3] + zz[i + 3];
-				zz[i + 3] = (uint)c;
-				c >>= 32;
-				c += x_i * y[4] + zz[i + 4];
-				zz[i + 4] = (uint)c;
-				c >>= 32;
-				c += x_i * y[5] + zz[i + 5];
-				zz[i + 5] = (uint)c;
-				c >>= 32;
-				c += x_i * y[6] + zz[i + 6];
-				zz[i + 6] = (uint)c;
-				c >>= 32;
-				c += x_i * y[7] + zz[i + 7];
-				zz[i + 7] = (uint)c;
-				c >>= 32;
-				zz[i + 8] = (uint)c;
-			}
+			/* l[0..15] = a[0..7] * b[0..7]. */
+			v = (ulong)a.d0 * b.d0; acc0 += v; VERIFY_CHECK(acc0 >= v); // muladd_fast(a.d0, b.d0);
+			l[0] = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out l[0]);
+			v = (ulong)a.d0 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d0, b.d1);
+			v = (ulong)a.d1 * b.d0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d0);
+			l[1] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[1]);
+			v = (ulong)a.d0 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d0, b.d2);
+			v = (ulong)a.d1 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d1);
+			v = (ulong)a.d2 * b.d0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d0);
+			l[2] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[2]);
+			v = (ulong)a.d0 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d0, b.d3);
+			v = (ulong)a.d1 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d2);
+			v = (ulong)a.d2 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d1);
+			v = (ulong)a.d3 * b.d0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d0);
+			l[3] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[3]);
+			v = (ulong)a.d0 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d0, b.d4);
+			v = (ulong)a.d1 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d3);
+			v = (ulong)a.d2 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d2);
+			v = (ulong)a.d3 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d1);
+			v = (ulong)a.d4 * b.d0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d0);
+			l[4] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[4]);
+			v = (ulong)a.d0 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d0, b.d5);
+			v = (ulong)a.d1 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d4);
+			v = (ulong)a.d2 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d3);
+			v = (ulong)a.d3 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d2);
+			v = (ulong)a.d4 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d1);
+			v = (ulong)a.d5 * b.d0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d0);
+			l[5] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[5]);
+			v = (ulong)a.d0 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d0, b.d6);
+			v = (ulong)a.d1 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d5);
+			v = (ulong)a.d2 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d4);
+			v = (ulong)a.d3 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d3);
+			v = (ulong)a.d4 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d2);
+			v = (ulong)a.d5 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d1);
+			v = (ulong)a.d6 * b.d0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d0);
+			l[6] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[6]);
+			v = (ulong)a.d0 * b.d7; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d0, b.d7);
+			v = (ulong)a.d1 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d6);
+			v = (ulong)a.d2 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d5);
+			v = (ulong)a.d3 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d4);
+			v = (ulong)a.d4 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d3);
+			v = (ulong)a.d5 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d2);
+			v = (ulong)a.d6 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d1);
+			v = (ulong)a.d7 * b.d0; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d7, b.d0);
+			l[7] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[7]);
+			v = (ulong)a.d1 * b.d7; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d1, b.d7);
+			v = (ulong)a.d2 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d6);
+			v = (ulong)a.d3 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d5);
+			v = (ulong)a.d4 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d4);
+			v = (ulong)a.d5 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d3);
+			v = (ulong)a.d6 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d2);
+			v = (ulong)a.d7 * b.d1; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d7, b.d1);
+			l[8] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[8]);
+			v = (ulong)a.d2 * b.d7; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d2, b.d7);
+			v = (ulong)a.d3 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d6);
+			v = (ulong)a.d4 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d5);
+			v = (ulong)a.d5 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d4);
+			v = (ulong)a.d6 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d3);
+			v = (ulong)a.d7 * b.d2; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d7, b.d2);
+			l[9] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[9]);
+			v = (ulong)a.d3 * b.d7; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d3, b.d7);
+			v = (ulong)a.d4 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d6);
+			v = (ulong)a.d5 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d5);
+			v = (ulong)a.d6 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d4);
+			v = (ulong)a.d7 * b.d3; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d7, b.d3);
+			l[10] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[10]);
+			v = (ulong)a.d4 * b.d7; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d4, b.d7);
+			v = (ulong)a.d5 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d6);
+			v = (ulong)a.d6 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d5);
+			v = (ulong)a.d7 * b.d4; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d7, b.d4);
+			l[11] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[11]);
+			v = (ulong)a.d5 * b.d7; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d5, b.d7);
+			v = (ulong)a.d6 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d6);
+			v = (ulong)a.d7 * b.d5; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d7, b.d5);
+			l[12] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[12]);
+			v = (ulong)a.d6 * b.d7; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d6, b.d7);
+			v = (ulong)a.d7 * b.d6; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a.d7, b.d6);
+			l[13] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[13]);
+			v = (ulong)a.d7 * b.d7; acc0 += v; VERIFY_CHECK(acc0 >= v); // muladd_fast(a.d7, b.d7);
+			l[14] = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out l[14]);
+			VERIFY_CHECK((acc0 >> 32) == 0);
+			l[15] = (uint)acc0;
 		}
 		private const ulong M = 0xFFFFFFFFUL;
-		internal static void sqr_512(Span<uint> zz, Span<uint> x)
+		internal static void sqr_512(Span<uint> l, Span<uint> a)
 		{
-			ulong x_0 = x[0];
-			ulong zz_1;
+			/* 160 bit accumulator. */
+			ulong v;
+			ulong acc0 = 0;
+			uint acc1 = 0;
 
-			uint c = 0, w;
-			{
-				int i = 7, j = 16;
-				do
-				{
-					ulong xVal = x[i--];
-					ulong p = xVal * xVal;
-					zz[--j] = (c << 31) | (uint)(p >> 33);
-					zz[--j] = (uint)(p >> 1);
-					c = (uint)p;
-				}
-				while (i > 0);
-
-				{
-					ulong p = x_0 * x_0;
-					zz_1 = (ulong)(c << 31) | (p >> 33);
-					zz[0] = (uint)p;
-					c = (uint)(p >> 32) & 1;
-				}
-			}
-
-			ulong x_1 = x[1];
-			ulong zz_2 = zz[2];
-
-			{
-				zz_1 += x_1 * x_0;
-				w = (uint)zz_1;
-				zz[1] = (w << 1) | c;
-				c = w >> 31;
-				zz_2 += zz_1 >> 32;
-			}
-
-			ulong x_2 = x[2];
-			ulong zz_3 = zz[3];
-			ulong zz_4 = zz[4];
-			{
-				zz_2 += x_2 * x_0;
-				w = (uint)zz_2;
-				zz[2] = (w << 1) | c;
-				c = w >> 31;
-				zz_3 += (zz_2 >> 32) + x_2 * x_1;
-				zz_4 += zz_3 >> 32;
-				zz_3 &= M;
-			}
-
-			ulong x_3 = x[3];
-			ulong zz_5 = zz[5] + (zz_4 >> 32); zz_4 &= M;
-			ulong zz_6 = zz[6] + (zz_5 >> 32); zz_5 &= M;
-			{
-				zz_3 += x_3 * x_0;
-				w = (uint)zz_3;
-				zz[3] = (w << 1) | c;
-				c = w >> 31;
-				zz_4 += (zz_3 >> 32) + x_3 * x_1;
-				zz_5 += (zz_4 >> 32) + x_3 * x_2;
-				zz_4 &= M;
-				zz_6 += zz_5 >> 32;
-				zz_5 &= M;
-			}
-
-			ulong x_4 = x[4];
-			ulong zz_7 = zz[7] + (zz_6 >> 32); zz_6 &= M;
-			ulong zz_8 = zz[8] + (zz_7 >> 32); zz_7 &= M;
-			{
-				zz_4 += x_4 * x_0;
-				w = (uint)zz_4;
-				zz[4] = (w << 1) | c;
-				c = w >> 31;
-				zz_5 += (zz_4 >> 32) + x_4 * x_1;
-				zz_6 += (zz_5 >> 32) + x_4 * x_2;
-				zz_5 &= M;
-				zz_7 += (zz_6 >> 32) + x_4 * x_3;
-				zz_6 &= M;
-				zz_8 += zz_7 >> 32;
-				zz_7 &= M;
-			}
-
-			ulong x_5 = x[5];
-			ulong zz_9 = zz[9] + (zz_8 >> 32); zz_8 &= M;
-			ulong zz_10 = zz[10] + (zz_9 >> 32); zz_9 &= M;
-			{
-				zz_5 += x_5 * x_0;
-				w = (uint)zz_5;
-				zz[5] = (w << 1) | c;
-				c = w >> 31;
-				zz_6 += (zz_5 >> 32) + x_5 * x_1;
-				zz_7 += (zz_6 >> 32) + x_5 * x_2;
-				zz_6 &= M;
-				zz_8 += (zz_7 >> 32) + x_5 * x_3;
-				zz_7 &= M;
-				zz_9 += (zz_8 >> 32) + x_5 * x_4;
-				zz_8 &= M;
-				zz_10 += zz_9 >> 32;
-				zz_9 &= M;
-			}
-
-			ulong x_6 = x[6];
-			ulong zz_11 = zz[11] + (zz_10 >> 32); zz_10 &= M;
-			ulong zz_12 = zz[12] + (zz_11 >> 32); zz_11 &= M;
-			{
-				zz_6 += x_6 * x_0;
-				w = (uint)zz_6;
-				zz[6] = (w << 1) | c;
-				c = w >> 31;
-				zz_7 += (zz_6 >> 32) + x_6 * x_1;
-				zz_8 += (zz_7 >> 32) + x_6 * x_2;
-				zz_7 &= M;
-				zz_9 += (zz_8 >> 32) + x_6 * x_3;
-				zz_8 &= M;
-				zz_10 += (zz_9 >> 32) + x_6 * x_4;
-				zz_9 &= M;
-				zz_11 += (zz_10 >> 32) + x_6 * x_5;
-				zz_10 &= M;
-				zz_12 += zz_11 >> 32;
-				zz_11 &= M;
-			}
-
-			ulong x_7 = x[7];
-			ulong zz_13 = zz[13] + (zz_12 >> 32); zz_12 &= M;
-			ulong zz_14 = zz[14] + (zz_13 >> 32); zz_13 &= M;
-			{
-				zz_7 += x_7 * x_0;
-				w = (uint)zz_7;
-				zz[7] = (w << 1) | c;
-				c = w >> 31;
-				zz_8 += (zz_7 >> 32) + x_7 * x_1;
-				zz_9 += (zz_8 >> 32) + x_7 * x_2;
-				zz_10 += (zz_9 >> 32) + x_7 * x_3;
-				zz_11 += (zz_10 >> 32) + x_7 * x_4;
-				zz_12 += (zz_11 >> 32) + x_7 * x_5;
-				zz_13 += (zz_12 >> 32) + x_7 * x_6;
-				zz_14 += zz_13 >> 32;
-			}
-
-			w = (uint)zz_8;
-			zz[8] = (w << 1) | c;
-			c = w >> 31;
-			w = (uint)zz_9;
-			zz[9] = (w << 1) | c;
-			c = w >> 31;
-			w = (uint)zz_10;
-			zz[10] = (w << 1) | c;
-			c = w >> 31;
-			w = (uint)zz_11;
-			zz[11] = (w << 1) | c;
-			c = w >> 31;
-			w = (uint)zz_12;
-			zz[12] = (w << 1) | c;
-			c = w >> 31;
-			w = (uint)zz_13;
-			zz[13] = (w << 1) | c;
-			c = w >> 31;
-			w = (uint)zz_14;
-			zz[14] = (w << 1) | c;
-			c = w >> 31;
-			w = zz[15] + (uint)(zz_14 >> 32);
-			zz[15] = (w << 1) | c;
-		}
-		/** Add a*b to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void muladd(Span<uint> c, uint a, uint b)
-		{
-			uint tl, th;
-			{
-				ulong t = (ulong)a * b;
-				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
-				tl = (uint)t;
-			}
-			c[0] += tl;                 /* overflow is handled on the next line */
-			th += (c[0] < tl) ? 1U : 0;  /* at most 0xFFFFFFFF */
-			c[1] += th;                 /* overflow is handled on the next line */
-			c[2] += (c[1] < th) ? 1U : 0;  /* never overflows by contract (verified in the next line) */
-			VERIFY_CHECK((c[1] >= th) || (c[2] != 0));
+			/* l[0..15] = a[0..7]^2. */
+			v = (ulong)a[0] * a[0]; acc0 += v; VERIFY_CHECK(acc0 >= v); // muladd_fast(a[0], a[0]);
+			l[0] = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out l[0]);
+			v = (ulong)a[0] * a[1]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[0], a[1]);
+			l[1] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[1]);
+			v = (ulong)a[0] * a[2]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[0], a[2]);
+			v = (ulong)a[1] * a[1]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a[1], a[1]);
+			l[2] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[2]);
+			v = (ulong)a[0] * a[3]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[0], a[3]);
+			v = (ulong)a[1] * a[2]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[1], a[2]);
+			l[3] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[3]);
+			v = (ulong)a[0] * a[4]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[0], a[4]);
+			v = (ulong)a[1] * a[3]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[1], a[3]);
+			v = (ulong)a[2] * a[2]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a[2], a[2]);
+			l[4] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[4]);
+			v = (ulong)a[0] * a[5]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[0], a[5]);
+			v = (ulong)a[1] * a[4]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[1], a[4]);
+			v = (ulong)a[2] * a[3]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[2], a[3]);
+			l[5] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[5]);
+			v = (ulong)a[0] * a[6]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[0], a[6]);
+			v = (ulong)a[1] * a[5]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[1], a[5]);
+			v = (ulong)a[2] * a[4]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[2], a[4]);
+			v = (ulong)a[3] * a[3]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a[3], a[3]);
+			l[6] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[6]);
+			v = (ulong)a[0] * a[7]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[0], a[7]);
+			v = (ulong)a[1] * a[6]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[1], a[6]);
+			v = (ulong)a[2] * a[5]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[2], a[5]);
+			v = (ulong)a[3] * a[4]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[3], a[4]);
+			l[7] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[7]);
+			v = (ulong)a[1] * a[7]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[1], a[7]);
+			v = (ulong)a[2] * a[6]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[2], a[6]);
+			v = (ulong)a[3] * a[5]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[3], a[5]);
+			v = (ulong)a[4] * a[4]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a[4], a[4]);
+			l[8] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[8]);
+			v = (ulong)a[2] * a[7]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[2], a[7]);
+			v = (ulong)a[3] * a[6]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[3], a[6]);
+			v = (ulong)a[4] * a[5]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[4], a[5]);
+			l[9] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[9]);
+			v = (ulong)a[3] * a[7]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[3], a[7]);
+			v = (ulong)a[4] * a[6]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[4], a[6]);
+			v = (ulong)a[5] * a[5]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a[5], a[5]);
+			l[10] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[10]);
+			v = (ulong)a[4] * a[7]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[4], a[7]);
+			v = (ulong)a[5] * a[6]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[5], a[6]);
+			l[11] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[11]);
+			v = (ulong)a[5] * a[7]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[5], a[7]);
+			v = (ulong)a[6] * a[6]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd(a[6], a[6]);
+			l[12] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[12]);
+			v = (ulong)a[6] * a[7]; acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); acc0 += v; acc1 += (acc0 < v) ? 1U : 0; VERIFY_CHECK((acc0 >= v) || (acc1 != 0)); // muladd2(a[6], a[7]);
+			l[13] = (uint)acc0; acc0 >>= 32; acc0 |= (ulong)acc1 << 32; acc1 = 0;  // extract(out l[13]);
+			v = (ulong)a[7] * a[7]; acc0 += v; VERIFY_CHECK(acc0 >= v); // muladd_fast(a[7], a[7]);
+			l[14] = (uint)acc0; acc0 >>= 32; VERIFY_CHECK(acc1 == 0); // extract_fast(out l[14]);
+			VERIFY_CHECK((acc0 >> 32) == 0);
+			l[15] = (uint)acc0;
 		}
 
-		/** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
-		[MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.AggressiveInlining)]
-		static void muladd_fast(Span<uint> c, uint a, uint b)
-		{
-			uint tl, th;
-			{
-				ulong t = (ulong)a * b;
-				th = (uint)(t >> 32);         /* at most 0xFFFFFFFE */
-				tl = (uint)t;
-			}
-			c[0] += tl;                 /* overflow is handled on the next line */
-			th += (c[0] < tl) ? 1U : 0U;  /* at most 0xFFFFFFFF */
-			c[1] += th;                 /* never overflows by contract (verified in the next line) */
-			VERIFY_CHECK(c[1] >= th);
-		}
-
-		/** Add a to the number defined by (c0,c1,c2). c2 must never overflow. */
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void sumadd(Span<uint> acc, uint a)
-		{
-			uint over;
-			acc[0] += (a);                  /* overflow is handled on the next line */
-			over = (acc[0] < (a)) ? 1U : 0;
-			acc[1] += over;                 /* overflow is handled on the next line */
-			acc[2] += (acc[1] < over) ? 1U : 0;  /* never overflows by contract */
-		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public readonly Scalar Add(in Scalar b)
 		{
 			return Add(b, out _);
 		}
-		[MethodImpl(MethodImplOptions.NoOptimization)]
+
 		public readonly Scalar Add(in Scalar b, out int overflow)
 		{
 			Span<uint> d = stackalloc uint[DCount];

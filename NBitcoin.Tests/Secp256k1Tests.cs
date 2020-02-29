@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
 using System.Security.Cryptography;
+using System.IO;
 
 namespace NBitcoin.Tests
 {
