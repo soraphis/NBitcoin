@@ -181,6 +181,7 @@ namespace NBitcoin.Tests
 			Assert.True(x.EqualsVariable(xr));
 		}
 		ECMultiplicationContext ecmult_ctx = ECMultiplicationContext.Instance;
+		Context ctx = Context.Instance;
 		private void test_point_times_order(GroupElementJacobian point)
 		{
 			/* X * (point + G) + (order-X) * (pointer + G) = 0 */
@@ -203,10 +204,10 @@ namespace NBitcoin.Tests
 			Assert.True(res3.IsInfinity);
 			Assert.True(!res3.IsValidVariable);
 			var pubs = pub.AsSpan();
-			Assert.Throws<InvalidOperationException>(() => new ECPubKey(res3));
+			Assert.Throws<InvalidOperationException>(() => new ECPubKey(res3, ctx));
 			psize = 65;
 			pubs = pub.AsSpan();
-			Assert.Throws<InvalidOperationException>(() => new ECPubKey(res3));
+			Assert.Throws<InvalidOperationException>(() => new ECPubKey(res3, ctx));
 			psize = pubs.Length;
 			/* check zero/one edge cases */
 			res1 = ecmult_ctx.ECMultiply(point, zero, zero);
@@ -328,12 +329,12 @@ namespace NBitcoin.Tests
 
 		private void test_ecdsa_end_to_end()
 		{
-			var ctx = ECMultiplicationGeneratorContext.Instance;
+			var ctx = Context.Instance;
 			byte[] extra = new byte[32];
 			int pubkeyclen;
-			var privkey = new ECPrivKey();
+			ECPrivKey privkey = null;
 			byte[] message = new byte[32];
-			var privkey2= new ECPrivKey();
+			ECPrivKey privkey2 = null;
 
 			ECDSASignature[] signature = new ECDSASignature[6];
 			Scalar r, s;
@@ -349,7 +350,7 @@ namespace NBitcoin.Tests
 			{
 				var msg = random_scalar_order_test();
 				var key = random_scalar_order_test();
-				privkey = new ECPrivKey(key);
+				privkey = ctx.CreateECPrivKey(key);
 				msg.WriteToSpan(message);
 			}
 
@@ -361,7 +362,7 @@ namespace NBitcoin.Tests
 
 			pubkey.WriteToSpan(secp256k1_rand_bits(1) == 1, pubkeyc, out pubkeyclen);
 			pubkeyc = pubkeyc.Slice(0, pubkeyclen);
-			Assert.True(ECPubKey.TryParse(pubkeyc, out pubkey));
+			Assert.True(ctx.TryCreatePubKey(pubkeyc, out pubkey));
 
 			///* Verify negation changes the key and changes it back */
 			pubkey_tmp = pubkey;
@@ -372,46 +373,42 @@ namespace NBitcoin.Tests
 
 			///* Verify private key import and export. */
 			privkey.WriteDerToSpan(secp256k1_rand_bits(1) == 1, seckey, out seckeylen);
-			Assert.True(ECPrivKey.TryCreateFromDer(seckey, out privkey2));
+			Assert.True(ctx.TryCreatePrivKeyFromDer(seckey, out privkey2));
 			Assert.Equal(privkey, privkey2);
 
-			///* Optionally tweak the keys using addition. */
-			//if (secp256k1_rand_int(3) == 0)
-			//{
-			//	int ret1;
-			//	int ret2;
-			//	byte[] rnd[32];
-			//	secp256k1_pubkey pubkey2;
-			//	secp256k1_rand256_test(rnd);
-			//	ret1 = secp256k1_ec_privkey_tweak_add(ctx, privkey, rnd);
-			//	ret2 = secp256k1_ec_pubkey_tweak_add(ctx, &pubkey, rnd);
-			//	Assert.True(ret1 == ret2);
-			//	if (ret1 == 0)
-			//	{
-			//		return;
-			//	}
-			//	Assert.True(secp256k1_ec_pubkey_create(ctx, &pubkey2, privkey) == 1);
-			//	Assert.True(memcmp(&pubkey, &pubkey2, sizeof(pubkey)) == 0);
-			//}
+			/* Optionally tweak the keys using addition. */
+			if (secp256k1_rand_int(3) == 0)
+			{
+				bool ret1;
+				bool ret2;
+				Span<byte> rnd = stackalloc byte[32];
+				ECPubKey pubkey2;
+				secp256k1_rand256_test(rnd);
+				ret1 = privkey.TryAddTweak(rnd, out privkey);
+				ret2 = pubkey.TryAddTweak(rnd, out pubkey);
+				Assert.Equal(ret1, ret2);
+				if (!ret1)
+					return;
+				pubkey2 = privkey.CreatePubKey();
+				Assert.Equal(pubkey, pubkey2);
+			}
 
 			///* Optionally tweak the keys using multiplication. */
-			//if (secp256k1_rand_int(3) == 0)
-			//{
-			//	int ret1;
-			//	int ret2;
-			//	byte[] rnd = new byte[32];
-			//	secp256k1_pubkey pubkey2;
-			//	secp256k1_rand256_test(rnd);
-			//	ret1 = secp256k1_ec_privkey_tweak_mul(ctx, privkey, rnd);
-			//	ret2 = secp256k1_ec_pubkey_tweak_mul(ctx, &pubkey, rnd);
-			//	Assert.True(ret1 == ret2);
-			//	if (ret1 == 0)
-			//	{
-			//		return;
-			//	}
-			//	Assert.True(secp256k1_ec_pubkey_create(ctx, &pubkey2, privkey) == 1);
-			//	Assert.True(memcmp(&pubkey, &pubkey2, sizeof(pubkey)) == 0);
-			//}
+			if (secp256k1_rand_int(3) == 0)
+			{
+				bool ret1;
+				bool ret2;
+				Span<byte> rnd = stackalloc byte[32];
+				ECPubKey pubkey2;
+				secp256k1_rand256_test(rnd);
+				ret1 = privkey.TryMultTweak(rnd, out privkey);
+				ret2 = pubkey.TryMultTweak(rnd, out pubkey);
+				Assert.Equal(ret1, ret2);
+				if (!ret1)
+					return;
+				pubkey2 = privkey.CreatePubKey();
+				Assert.Equal(pubkey, pubkey2);
+			}
 
 			///* Sign. */
 			//Assert.True(secp256k1_ecdsa_sign(ctx, &signature[0], message, privkey, NULL, NULL) == 1);
@@ -839,7 +836,7 @@ namespace NBitcoin.Tests
 			}
 
 			s1.WriteToSpan(tmp);
-			AssertEx.CollectionEquals(zero.Slice(0,16).ToArray(), tmp.Slice(0, 16).ToArray());
+			AssertEx.CollectionEquals(zero.Slice(0, 16).ToArray(), tmp.Slice(0, 16).ToArray());
 			slam.WriteToSpan(tmp);
 			AssertEx.CollectionEquals(zero.Slice(0, 16).ToArray(), tmp.Slice(0, 16).ToArray());
 		}
@@ -2309,7 +2306,7 @@ namespace NBitcoin.Tests
 				x = x + t;
 			}
 			/* If skew is 1 then add 1 to num */
-			num= num.CAddBit(0, skew == 1 ? 1 : 0);
+			num = num.CAddBit(0, skew == 1 ? 1 : 0);
 			Assert.Equal(x, num);
 		}
 
@@ -2358,7 +2355,7 @@ namespace NBitcoin.Tests
 			Assert.True(skew == 0);
 
 			{
-				int[] wnaf_expected = new int[]{ 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf };
+				int[] wnaf_expected = new int[] { 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf };
 				num = new Scalar(0xffffffff);
 				skew = Wnaf.Fixed(wnaf, num, w);
 				test_fixed_wnaf_small_helper(wnaf, wnaf_expected, w);
@@ -2549,6 +2546,31 @@ namespace NBitcoin.Tests
 		{
 			// Should reproduce the secp256k1_test_rng
 			RandomUtils.GetBytes(output);
+		}
+
+		private void secp256k1_rand256_test(Span<byte> output)
+		{
+			secp256k1_rand_bytes_test(output, 32);
+		}
+
+		private void secp256k1_rand_bytes_test(Span<byte> bytes, int len)
+		{
+			int bits = 0;
+			bytes = bytes.Slice(0, len);
+			bytes.Fill(0);
+			while (bits < len * 8)
+			{
+				uint now;
+				uint val;
+				now = 1 + (secp256k1_rand_bits(6) * secp256k1_rand_bits(5) + 16) / 31;
+				val = secp256k1_rand_bits(1);
+				while (now > 0 && bits < len * 8)
+				{
+					bytes[bits / 8] |= (byte)(val << (bits % 8));
+					now--;
+					bits++;
+				}
+			}
 		}
 	}
 }

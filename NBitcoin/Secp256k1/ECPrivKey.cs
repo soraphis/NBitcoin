@@ -8,9 +8,9 @@ namespace NBitcoin.Secp256k1
 	class ECPrivKey
 	{
 		byte[] _data;
-		ECMultiplicationGeneratorContext genContext;
+		Context ctx;
 
-		public static bool TryCreateFromDer(ReadOnlySpan<byte> privkey, out ECPrivKey result)
+		public static bool TryCreateFromDer(ReadOnlySpan<byte> privkey, Context ctx, out ECPrivKey result)
 		{
 			result = null;
 			Span<byte> out32 = stackalloc byte[32];
@@ -57,7 +57,7 @@ namespace NBitcoin.Secp256k1
 				return false;
 			}
 			privkey.Slice(2, privkey[1]).CopyTo(out32.Slice(32 - privkey[1]));
-			result = new ECPrivKey(out32);
+			result = new ECPrivKey(out32, ctx);
 			if (!result.IsValid)
 			{
 				out32.Fill(0);
@@ -73,25 +73,19 @@ namespace NBitcoin.Secp256k1
 		{
 			_data.AsSpan().Fill(0);
 		}
-
-		public ECPrivKey(ECMultiplicationGeneratorContext genContext = null)
-		{
-			_data = new byte[32];
-			this.genContext = genContext ?? ECMultiplicationGeneratorContext.Instance;
-		}
-		public ECPrivKey(in Scalar scalar, ECMultiplicationGeneratorContext genContext = null)
+		public ECPrivKey(in Scalar scalar, Context ctx)
 		{
 			_data = new byte[32];
 			scalar.WriteToSpan(_data);
-			this.genContext = genContext ?? ECMultiplicationGeneratorContext.Instance;
+			this.ctx = ctx ?? Context.Instance;
 		}
-		public ECPrivKey(Span<byte> b32, ECMultiplicationGeneratorContext genContext = null)
+		public ECPrivKey(ReadOnlySpan<byte> b32, Context ctx)
 		{
 			if (b32.Length != 32)
 				throw new ArgumentException(paramName: nameof(b32), message: "b32 should be of length 32");
 			_data = new byte[32];
 			b32.CopyTo(_data);
-			this.genContext = genContext ?? ECMultiplicationGeneratorContext.Instance;
+			this.ctx = ctx ?? Context.Instance;
 		}
 
 		[MethodImpl(MethodImplOptions.NoOptimization)]
@@ -145,9 +139,9 @@ namespace NBitcoin.Secp256k1
 			ret = (overflow != 0 ? 0 : 1) & (!sec.IsZero ? 1 : 0);
 			if (ret != 0)
 			{
-				genContext.secp256k1_ecmult_gen(out pj, sec);
+				ctx.ECMultiplicationGeneratorContext.secp256k1_ecmult_gen(out pj, sec);
 				p = pj.ToGroupElement();
-				pubKey = new ECPubKey(p);
+				pubKey = new ECPubKey(p, ctx);
 			}
 			else
 			{
@@ -155,6 +149,42 @@ namespace NBitcoin.Secp256k1
 			}
 			sec = default;
 			return pubKey;
+		}
+
+		public ECPrivKey TryAddTweak(ReadOnlySpan<byte> tweak)
+		{
+			if (TryAddTweak(tweak, out var r))
+				return r;
+			throw new ArgumentException(paramName: nameof(tweak), message: "Invalid tweak");
+		}
+		public bool TryAddTweak(ReadOnlySpan<byte> tweak, out ECPrivKey tweakedPrivKey)
+		{
+			tweakedPrivKey = null;
+			if (tweak.Length < 32)
+				return false;
+			Scalar term;
+			Scalar sec;
+			ECPrivKey seckey;
+			bool ret;
+			int overflow = 0;
+			term = new Scalar(tweak, out overflow);
+			sec = new Scalar(_data, out _);
+
+			ret = overflow == 0 && secp256k1_eckey_privkey_tweak_add(ref sec, term);
+			if (ret)
+			{
+				seckey = new ECPrivKey(sec, ctx);
+				tweakedPrivKey = seckey;
+			}
+			sec = default;
+			term = default;
+			return ret;
+		}
+
+		private bool secp256k1_eckey_privkey_tweak_add(ref Scalar key, in Scalar tweak)
+		{
+			key += tweak;
+			return !key.IsZero;
 		}
 
 		public void WriteDerToSpan(bool compressed, Span<byte> derOutput, out int length)
@@ -250,6 +280,42 @@ namespace NBitcoin.Secp256k1
 				}
 				return hash;
 			}
+		}
+
+		public ECPrivKey MultTweak(ReadOnlySpan<byte> tweak)
+		{
+			if (TryMultTweak(tweak, out var r))
+				return r;
+			throw new ArgumentException(paramName: nameof(tweak), message: "Invalid tweak");
+		}
+
+		public bool TryMultTweak(ReadOnlySpan<byte> tweak, out ECPrivKey tweakedPrivkey)
+		{
+			tweakedPrivkey = null;
+			if (tweak.Length < 32)
+				return false;
+			Scalar factor;
+			Scalar sec;
+			bool ret = false;
+			int overflow = 0;
+			factor = new Scalar(tweak, out overflow);
+			sec = new Scalar(_data, out _);
+			ret = overflow == 0 && secp256k1_eckey_privkey_tweak_mul(ref sec, factor);
+			if (ret)
+			{
+				tweakedPrivkey =  new ECPrivKey(sec, ctx);
+			}
+			sec = default;
+			factor = default;
+			return ret;
+		}
+
+		private bool secp256k1_eckey_privkey_tweak_mul(ref Scalar key, in Scalar tweak)
+		{
+			if (tweak.IsZero)
+				return false;
+			key *= tweak;
+			return true;
 		}
 	}
 }

@@ -7,18 +7,23 @@ namespace NBitcoin.Secp256k1
 	class ECPubKey
 	{
 		byte[] _data;
-		public ECPubKey()
+		Context ctx;
+		public ECPubKey(Context context)
 		{
+			if (context == null)
+				throw new ArgumentNullException(nameof(context));
 			_data = new byte[64];
+			this.ctx = context ?? Context.Instance;
 		}
-		public ECPubKey(Span<byte> data)
+		public ECPubKey(Span<byte> data, Context context)
 		{
 			if (data.Length != 64)
 				throw new ArgumentException(paramName: nameof(data), message: "data should be of length 64");
 			_data = new byte[64];
+			this.ctx = context ?? Context.Instance;
 			data.CopyTo(_data);
 		}
-		public ECPubKey(in GroupElement groupElement)
+		public ECPubKey(in GroupElement groupElement, Context context)
 		{
 			if (groupElement.IsInfinity)
 			{
@@ -27,6 +32,7 @@ namespace NBitcoin.Secp256k1
 			var x = groupElement.x.NormalizeVariable();
 			var y = groupElement.y.NormalizeVariable();
 			_data = new byte[64];
+			this.ctx = context ?? Context.Instance;
 			var datas = _data.AsSpan();
 			x.WriteToSpan(datas);
 			y.WriteToSpan(datas.Slice(32));
@@ -91,13 +97,13 @@ namespace NBitcoin.Secp256k1
 
 
 
-		public static bool TryParse(ReadOnlySpan<byte> input, out ECPubKey pubkey)
+		public static bool TryCreate(ReadOnlySpan<byte> input, Context ctx, out ECPubKey pubkey)
 		{
 			GroupElement Q;
 			pubkey = null;
 			if (!EC.Pubkey_parse(input, out Q))
 				return false;
-			pubkey = new ECPubKey(Q);
+			pubkey = new ECPubKey(Q, ctx);
 			Q = default;
 			return true;
 		}
@@ -107,7 +113,7 @@ namespace NBitcoin.Secp256k1
 			if (!this.TryLoad(out var Q))
 				return null;
 			Q = Q.Negate();
-			return new ECPubKey(Q);
+			return new ECPubKey(Q, ctx);
 		}
 
 
@@ -148,6 +154,102 @@ namespace NBitcoin.Secp256k1
 				}
 				return hash;
 			}
+		}
+
+		public ECPubKey AddTweak(ReadOnlySpan<byte> tweak)
+		{
+			if (TryAddTweak(tweak, out var r))
+				return r;
+			throw new ArgumentException(paramName: nameof(tweak), message: "Invalid tweak");
+		}
+		public bool TryAddTweak(ReadOnlySpan<byte> tweak, out ECPubKey tweakedPubKey)
+		{
+			tweakedPubKey = null;
+			if (tweak.Length < 32)
+				return false;
+			GroupElement p;
+			Scalar term;
+			bool ret = false;
+			int overflow = 0;
+			term = new Scalar(tweak, out overflow);
+			ret = overflow == 0;
+			if (ret)
+			{
+				if (TryLoad(out p) && secp256k1_eckey_pubkey_tweak_add(ctx.ECMultiplicationContext, ref p, term))
+				{
+					tweakedPubKey = new ECPubKey(p, ctx);
+				}
+				else
+				{
+					ret = false;
+				}
+			}
+			return ret;
+		}
+
+		private bool secp256k1_eckey_pubkey_tweak_add(ECMultiplicationContext ctx, ref GroupElement key, in Scalar tweak)
+		{
+			GroupElementJacobian pt;
+			Scalar one;
+			pt = key.ToGroupElementJacobian();
+			one = Scalar.One;
+
+			pt = ctx.ECMultiply(pt, one, tweak);
+
+			if (pt.IsInfinity)
+			{
+				return false;
+			}
+			key = pt.ToGroupElement();
+			return true;
+		}
+
+		public ECPubKey MultTweak(ReadOnlySpan<byte> tweak)
+		{
+			if (TryMultTweak(tweak, out var r))
+				return r;
+			throw new ArgumentException(paramName: nameof(tweak), message: "Invalid tweak");
+		}
+		public bool TryMultTweak(ReadOnlySpan<byte> tweak, out ECPubKey tweakedPubKey)
+		{
+			tweakedPubKey = null;
+			if (tweak.Length < 32)
+				return false;
+			GroupElement p;
+			Scalar factor;
+			bool ret = false;
+			int overflow = 0;
+
+			factor = new Scalar(tweak, out overflow);
+			ret = overflow == 0;
+			if (ret)
+			{
+				if (TryLoad(out p) && secp256k1_eckey_pubkey_tweak_mul(ctx.ECMultiplicationContext, ref p, factor))
+				{
+					tweakedPubKey = new ECPubKey(p, ctx);
+				}
+				else
+				{
+					ret = false;
+				}
+			}
+
+			return ret;
+		}
+
+		private static bool secp256k1_eckey_pubkey_tweak_mul(ECMultiplicationContext ctx, ref GroupElement key, in Scalar tweak)
+		{
+			Scalar zero;
+			GroupElementJacobian pt;
+			if (tweak.IsZero)
+			{
+				return false;
+			}
+			zero = Scalar.Zero;
+			pt = key.ToGroupElementJacobian();
+			pt = ctx.ECMultiply(pt, tweak, zero);
+			key = pt.ToGroupElement();
+			return true;
 		}
 	}
 }
