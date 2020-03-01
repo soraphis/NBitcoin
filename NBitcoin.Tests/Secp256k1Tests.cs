@@ -355,7 +355,6 @@ namespace NBitcoin.Tests
 			}
 
 			/* Construct and verify corresponding public key. */
-			Assert.True(privkey.IsValid);
 			pubkey = privkey.CreatePubKey();
 			/* Verify exporting and importing public key. */
 

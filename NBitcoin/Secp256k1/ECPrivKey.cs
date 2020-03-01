@@ -5,10 +5,10 @@ using System.Text;
 
 namespace NBitcoin.Secp256k1
 {
-	class ECPrivKey
+	class ECPrivKey : IDisposable
 	{
-		byte[] _data;
-		Context ctx;
+		Scalar sec;
+		readonly Context ctx;
 
 		public static bool TryCreateFromDer(ReadOnlySpan<byte> privkey, Context ctx, out ECPrivKey result)
 		{
@@ -57,68 +57,37 @@ namespace NBitcoin.Secp256k1
 				return false;
 			}
 			privkey.Slice(2, privkey[1]).CopyTo(out32.Slice(32 - privkey[1]));
-			result = new ECPrivKey(out32, ctx);
-			if (!result.IsValid)
+			var s = new Scalar(out32);
+			if (!Scalar.IsValid(s))
 			{
 				out32.Fill(0);
 				result.Clear();
 				result = null;
 				return false;
 			}
-
+			result = new ECPrivKey(s, ctx);
 			return true;
 		}
 
 		public void Clear()
 		{
-			_data.AsSpan().Fill(0);
+			sec = default;
 		}
 		public ECPrivKey(in Scalar scalar, Context ctx)
 		{
-			_data = new byte[32];
-			scalar.WriteToSpan(_data);
+			if (scalar.IsZero || scalar.IsOverflow)
+				throw new ArgumentException(paramName: nameof(scalar), message: "Invalid privkey");
+			sec = scalar;
 			this.ctx = ctx ?? Context.Instance;
 		}
 		public ECPrivKey(ReadOnlySpan<byte> b32, Context ctx)
 		{
 			if (b32.Length != 32)
 				throw new ArgumentException(paramName: nameof(b32), message: "b32 should be of length 32");
-			_data = new byte[32];
-			b32.CopyTo(_data);
+			sec = new Scalar(b32, out int overflow);
+			if (overflow != 0 || sec.IsZero)
+				throw new ArgumentException(paramName: nameof(b32), message: "Invalid privkey");
 			this.ctx = ctx ?? Context.Instance;
-		}
-
-		[MethodImpl(MethodImplOptions.NoOptimization)]
-		public static bool CheckValidity(ReadOnlySpan<byte> data)
-		{
-			if (data.Length != 32)
-				return false;
-			Scalar sec = new Scalar(data, out int overflow);
-			bool ret = overflow == 0 && !sec.IsZero;
-			sec = Scalar.Zero;
-			return ret;
-		}
-
-		public bool IsValid
-		{
-			[MethodImpl(MethodImplOptions.NoOptimization)]
-			get
-			{
-				Scalar sec = new Scalar(_data, out int overflow);
-				bool ret = overflow == 0 && !sec.IsZero;
-				sec = Scalar.Zero;
-				return ret;
-			}
-		}
-		/// <summary>
-		/// Throw InvalidOperationException if this is an invalid EC key
-		/// </summary>
-		public void AssetValid()
-		{
-			if (!IsValid)
-			{
-				throw InvalidECPrivKeyException();
-			}
 		}
 
 		private static InvalidOperationException InvalidECPrivKeyException()
@@ -126,28 +95,14 @@ namespace NBitcoin.Secp256k1
 			return new InvalidOperationException("Invalid ECPrivKey");
 		}
 
-		[MethodImpl(MethodImplOptions.NoOptimization)]
 		public ECPubKey CreatePubKey()
 		{
 			GroupElementJacobian pj;
 			GroupElement p;
-			Scalar sec;
-			int overflow;
-			int ret = 0;
 			ECPubKey pubKey = null;
-			sec = new Scalar(_data, out overflow);
-			ret = (overflow != 0 ? 0 : 1) & (!sec.IsZero ? 1 : 0);
-			if (ret != 0)
-			{
-				ctx.ECMultiplicationGeneratorContext.secp256k1_ecmult_gen(out pj, sec);
-				p = pj.ToGroupElement();
-				pubKey = new ECPubKey(p, ctx);
-			}
-			else
-			{
-				throw InvalidECPrivKeyException();
-			}
-			sec = default;
+			ctx.ECMultiplicationGeneratorContext.secp256k1_ecmult_gen(out pj, sec);
+			p = pj.ToGroupElement();
+			pubKey = new ECPubKey(p, ctx);
 			return pubKey;
 		}
 
@@ -163,13 +118,12 @@ namespace NBitcoin.Secp256k1
 			if (tweak.Length < 32)
 				return false;
 			Scalar term;
-			Scalar sec;
 			ECPrivKey seckey;
 			bool ret;
 			int overflow = 0;
 			term = new Scalar(tweak, out overflow);
-			sec = new Scalar(_data, out _);
 
+			Scalar sec = this.sec;
 			ret = overflow == 0 && secp256k1_eckey_privkey_tweak_add(ref sec, term);
 			if (ret)
 			{
@@ -207,12 +161,12 @@ namespace NBitcoin.Secp256k1
 				var ptr = derOutput;
 				begin.CopyTo(ptr);
 				ptr = ptr.Slice(begin.Length);
-				_data.CopyTo(ptr);
-				ptr = ptr.Slice(_data.Length);
+				sec.WriteToSpan(ptr);
+				ptr = ptr.Slice(32);
 				middle.CopyTo(ptr);
 				ptr = ptr.Slice(middle.Length);
 				pubkey.WriteToSpan(true, ptr, out var lenptr);
-				length = begin.Length + _data.Length + middle.Length + lenptr;
+				length = begin.Length + 32 + middle.Length + lenptr;
 			}
 			else
 			{
@@ -233,12 +187,12 @@ namespace NBitcoin.Secp256k1
 				var ptr = derOutput;
 				begin.CopyTo(ptr);
 				ptr = ptr.Slice(begin.Length);
-				_data.CopyTo(ptr);
-				ptr = ptr.Slice(_data.Length);
+				sec.WriteToSpan(ptr);
+				ptr = ptr.Slice(32);
 				middle.CopyTo(ptr);
 				ptr = ptr.Slice(middle.Length);
 				pubkey.WriteToSpan(false, ptr, out var lenptr);
-				length = begin.Length + _data.Length + middle.Length + lenptr;
+				length = begin.Length + 32 + middle.Length + lenptr;
 			}
 		}
 
@@ -254,12 +208,7 @@ namespace NBitcoin.Secp256k1
 		{
 			if (a is ECPrivKey aa && b is ECPrivKey bb)
 			{
-				bool ret = true;
-				for (int i = 0; i < 32; i++)
-				{
-					ret &= aa._data[i] == bb._data[i];
-				}
-				return ret;
+				return aa.sec == bb.sec;
 			}
 			return a is null && b is null;
 		}
@@ -271,15 +220,7 @@ namespace NBitcoin.Secp256k1
 
 		public override int GetHashCode()
 		{
-			unchecked
-			{
-				int hash = 17;
-				for (int i = 0; i < 32; i++)
-				{
-					hash = hash * 23 + _data[i];
-				}
-				return hash;
-			}
+			return sec.GetHashCode();
 		}
 
 		public ECPrivKey MultTweak(ReadOnlySpan<byte> tweak)
@@ -295,11 +236,10 @@ namespace NBitcoin.Secp256k1
 			if (tweak.Length < 32)
 				return false;
 			Scalar factor;
-			Scalar sec;
 			bool ret = false;
 			int overflow = 0;
 			factor = new Scalar(tweak, out overflow);
-			sec = new Scalar(_data, out _);
+			var sec = this.sec;
 			ret = overflow == 0 && secp256k1_eckey_privkey_tweak_mul(ref sec, factor);
 			if (ret)
 			{
@@ -316,6 +256,11 @@ namespace NBitcoin.Secp256k1
 				return false;
 			key *= tweak;
 			return true;
+		}
+
+		public void Dispose()
+		{
+			Clear();
 		}
 	}
 }

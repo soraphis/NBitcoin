@@ -85,6 +85,11 @@ namespace NBitcoin.Secp256k1
 		internal Scalar(ReadOnlySpan<byte> b32) : this(b32, out _)
 		{
 		}
+
+		public static bool IsValid(in Scalar s)
+		{
+			return !s.IsZero && !s.IsOverflow;
+		}
 		internal Scalar(ReadOnlySpan<byte> b32, out int overflow)
 		{
 			d0 = (uint)b32[31] | (uint)b32[30] << 8 | (uint)b32[29] << 16 | (uint)b32[28] << 24;
