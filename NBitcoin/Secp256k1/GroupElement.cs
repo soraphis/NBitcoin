@@ -66,7 +66,7 @@ namespace NBitcoin.Secp256k1
 		}
 
 		const int SIZE_MAX = int.MaxValue;
-		public static void SetAllGroupElementJacobianVariable(GroupElement[] r, GroupElementJacobian[] a, int len)
+		public static void SetAllGroupElementJacobianVariable(Span<GroupElement> r, ReadOnlySpan<GroupElementJacobian> a, int len)
 		{
 			FieldElement u;
 			int i;
@@ -126,32 +126,6 @@ namespace NBitcoin.Secp256k1
 			if (!value)
 				throw new InvalidOperationException("VERIFY_CHECK failed (bug in C# secp256k1)");
 		}
-
-		public readonly bool SerializePubKey(Span<byte> output, bool compressed, out int size)
-		{
-			if (IsInfinity)
-			{
-				size = 0;
-				return false;
-			}
-			var elemx = x.NormalizeVariable();
-			var elemy = y.NormalizeVariable();
-
-			elemx.WriteToSpan(output.Slice(1));
-			if (compressed)
-			{
-				size = 33;
-				output[0] = elemy.IsOdd ? SECP256K1_TAG_PUBKEY_ODD : SECP256K1_TAG_PUBKEY_EVEN;
-			}
-			else
-			{
-				size = 65;
-				output[0] = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
-				elemy.WriteToSpan(output.Slice(33));
-			}
-			return true;
-		}
-
 
 		public static bool TryCreateXQuad(FieldElement x, out GroupElement result)
 		{

@@ -20,9 +20,14 @@ namespace NBitcoin.Crypto
 	/// </summary>
 	public class HashStream : HashStreamBase
 	{
-		public HashStream()
+		public HashStream() : this(false)
 		{
 
+		}
+		bool single;
+		public HashStream(bool singleSHA256)
+		{
+			single = singleSHA256;
 		}
 
 		public override bool CanRead
@@ -177,12 +182,32 @@ namespace NBitcoin.Crypto
 			ProcessBlock();
 			sha.TransformFinalBlock(Empty, 0, 0);
 			var hash1 = sha.Hash;
+			if (single)
+				return new uint256(hash1);
 			Buffer.BlockCopy(sha.Hash, 0, _Buffer, 0, 32);
 			sha.Initialize();
 			sha.TransformFinalBlock(_Buffer, 0, 32);
 			var hash2 = sha.Hash;
 			return new uint256(hash2);
 		}
+#if HAS_SPAN
+		public void GetHash(Span<byte> output)
+		{
+			ProcessBlock();
+			sha.TransformFinalBlock(Empty, 0, 0);
+			var hash1 = sha.Hash;
+			if (single)
+			{
+				hash1.AsSpan().CopyTo(output);
+				return;
+			}
+			Buffer.BlockCopy(sha.Hash, 0, _Buffer, 0, 32);
+			sha.Initialize();
+			sha.TransformFinalBlock(_Buffer, 0, 32);
+			var hash2 = sha.Hash;
+			hash2.AsSpan().CopyTo(output);
+		}
+#endif
 
 		protected override void Dispose(bool disposing)
 		{

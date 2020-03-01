@@ -24,7 +24,24 @@ namespace NBitcoin.Secp256k1
 			normalized = true;
 			VERIFY();
 		}
-		public FieldElement(ReadOnlySpan<byte> bytes)
+
+		public static bool TryCreate(ReadOnlySpan<byte> bytes, out FieldElement fieldElement)
+		{
+			var fe = new FieldElement(bytes, false, out var isValid);
+			if (isValid)
+			{
+				fieldElement = fe;
+				return true;
+			}
+			fieldElement = default;
+			return false;
+		}
+
+		public FieldElement(ReadOnlySpan<byte> bytes): this(bytes, true, out _)
+		{
+
+		}
+		FieldElement(ReadOnlySpan<byte> bytes, bool throws, out bool isValid)
 		{
 			n0 = (uint)bytes[31] | ((uint)bytes[30] << 8) | ((uint)bytes[29] << 16) | ((uint)(bytes[28] & 0x3) << 24);
 			n1 = (uint)((bytes[28] >> 2) & 0x3f) | ((uint)bytes[27] << 6) | ((uint)bytes[26] << 14) | ((uint)(bytes[25] & 0xf) << 22);
@@ -38,10 +55,19 @@ namespace NBitcoin.Secp256k1
 			n9 = (uint)((bytes[2] >> 2) & 0x3f) | ((uint)bytes[1] << 6) | ((uint)bytes[0] << 14);
 			if (n9 == 0x3FFFFFUL && (n8 & n7 & n6 & n5 & n4 & n3 & n2) == 0x3FFFFFFUL && (n1 + 0x40UL + ((n0 + 0x3D1UL) >> 26)) > 0x3FFFFFFUL)
 			{
-				throw new ArgumentException(paramName: nameof(bytes), message: "Invalid Field");
+				if (throws)
+					throw new ArgumentException(paramName: nameof(bytes), message: "Invalid Field");
+				else
+				{
+					isValid = false;
+					magnitude = 1;
+					normalized = true;
+					return;
+				}
 			}
 			magnitude = 1;
 			normalized = true;
+			isValid = true;
 			VERIFY();
 		}
 
@@ -1075,32 +1101,6 @@ namespace NBitcoin.Secp256k1
 			VERIFY_BITS(n[2], 27);
 			/* [r9 r8 r7 r6 r5 r4 r3 r2 r1 r0] = [p18 p17 p16 p15 p14 p13 p12 p11 p10 p9 p8 p7 p6 p5 p4 p3 p2 p1 p0] */
 			return new FieldElement(n, magnitude, normalized);
-		}
-
-		public static bool TryCreate(ReadOnlySpan<byte> bytes, out FieldElement field)
-		{
-			Span<uint> n = stackalloc uint[NCount];
-			int magnitude;
-			bool normalized;
-			n[0] = (uint)bytes[31] | ((uint)bytes[30] << 8) | ((uint)bytes[29] << 16) | ((uint)(bytes[28] & 0x3) << 24);
-			n[1] = (uint)((bytes[28] >> 2) & 0x3f) | ((uint)bytes[27] << 6) | ((uint)bytes[26] << 14) | ((uint)(bytes[25] & 0xf) << 22);
-			n[2] = (uint)((bytes[25] >> 4) & 0xf) | ((uint)bytes[24] << 4) | ((uint)bytes[23] << 12) | ((uint)(bytes[22] & 0x3f) << 20);
-			n[3] = (uint)((bytes[22] >> 6) & 0x3) | ((uint)bytes[21] << 2) | ((uint)bytes[20] << 10) | ((uint)bytes[19] << 18);
-			n[4] = (uint)bytes[18] | ((uint)bytes[17] << 8) | ((uint)bytes[16] << 16) | ((uint)(bytes[15] & 0x3) << 24);
-			n[5] = (uint)((bytes[15] >> 2) & 0x3f) | ((uint)bytes[14] << 6) | ((uint)bytes[13] << 14) | ((uint)(bytes[12] & 0xf) << 22);
-			n[6] = (uint)((bytes[12] >> 4) & 0xf) | ((uint)bytes[11] << 4) | ((uint)bytes[10] << 12) | ((uint)(bytes[9] & 0x3f) << 20);
-			n[7] = (uint)((bytes[9] >> 6) & 0x3) | ((uint)bytes[8] << 2) | ((uint)bytes[7] << 10) | ((uint)bytes[6] << 18);
-			n[8] = (uint)bytes[5] | ((uint)bytes[4] << 8) | ((uint)bytes[3] << 16) | ((uint)(bytes[2] & 0x3) << 24);
-			n[9] = (uint)((bytes[2] >> 2) & 0x3f) | ((uint)bytes[1] << 6) | ((uint)bytes[0] << 14);
-			if (n[9] == 0x3FFFFFUL && (n[8] & n[7] & n[6] & n[5] & n[4] & n[3] & n[2]) == 0x3FFFFFFUL && (n[1] + 0x40UL + ((n[0] + 0x3D1UL) >> 26)) > 0x3FFFFFFUL)
-			{
-				field = default;
-				return false;
-			}
-			magnitude = 1;
-			normalized = true;
-			field = new FieldElement(n, magnitude, normalized);
-			return true;
 		}
 
 		[MethodImpl(MethodImplOptions.NoOptimization)]

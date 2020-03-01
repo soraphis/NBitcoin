@@ -622,6 +622,12 @@ namespace NBitcoin.Crypto
 		{
 			return SHA256(data, 0, data.Length);
 		}
+#if HAS_SPAN
+		public static byte[] SHA256(ReadOnlySpan<byte> data)
+		{
+			return SHA256(data.ToArray(), 0, data.Length);
+		}
+#endif
 
 		public static byte[] SHA256(byte[] data, int offset, int count)
 		{
