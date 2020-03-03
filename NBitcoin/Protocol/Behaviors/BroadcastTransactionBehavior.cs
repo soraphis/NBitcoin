@@ -103,7 +103,7 @@ namespace NBitcoin.Protocol.Behaviors
 		/// </summary>
 		/// <param name="transaction">The transaction to broadcast</param>
 		/// <returns>The cause of the rejection or null</returns>
-		public Task<RejectPayload> BroadcastTransactionAsync(Transaction transaction)
+		public Task<RejectPayload> BroadcastTransactionAsync(Transaction transaction, int timeoutMilliseconds = -1)
 		{
 			if (transaction == null)
 				throw new ArgumentNullException(nameof(transaction));
@@ -138,8 +138,29 @@ namespace NBitcoin.Protocol.Behaviors
 				};
 				TransactionRejected += rejected;
 				OnBroadcastTransaction(transaction);
+
+				if (timeoutMilliseconds != -1) // ### is the timeout logic as such really a good idea?!
+				{
+					Task.Delay(timeoutMilliseconds).ContinueWith(t =>
+					{
+						if (BroadcastedTransaction.TryRemove(hash, out var transaction_))
+						{
+							TransactionRejected -= rejected;
+							TransactionBroadcasted -= broadcasted;
+							var rP = new RejectPayload() { Code = RejectCode.NONSTANDARD, Hash = hash, Message = "tx", Reason = _TimeoutMessage };
+							completion.SetResult(rP); // case occurred where we tried to set a result due to timeout here, after a result had been set already due to too-long mempool chain.
+													  //completion.TrySetResult(rP);
+						}
+					});
+				}
 			}
 			return completion.Task;
+		}
+
+		private static readonly string _TimeoutMessage = "sending timed out";
+		public bool DidTimeOut(RejectPayload rp)
+		{
+			return rp?.Code == RejectCode.NONSTANDARD && _TimeoutMessage.Equals(rp?.Reason);
 		}
 
 		/// <summary>
