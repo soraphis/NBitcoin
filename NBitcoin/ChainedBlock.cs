@@ -110,6 +110,29 @@ namespace NBitcoin
 
 		BigInteger _ChainWork;
 
+		public uint256 CachedChainWork
+		{
+			get
+			{
+				if(_ChainWork != null)
+				{
+					return Target.ToUInt256(_ChainWork);
+				}
+				return null;
+		    }
+		    set
+		    {
+				if (value != null)
+				{
+					_ChainWork = value.ToBigInteger();
+				}
+				else
+				{
+					_ChainWork = null;
+				}
+			}
+		}
+
 		// Might be computationally intense
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 		[Obsolete("Use GetChainWork() instead")]

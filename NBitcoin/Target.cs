@@ -164,6 +164,7 @@ namespace NBitcoin
 			return ToUInt256(_Target);
 		}
 
+		// move to BigInteger/UInt256.cs?
 		internal static uint256 ToUInt256(BigInteger input)
 		{
 			var array = input.ToByteArray();

@@ -13,12 +13,15 @@ namespace NBitcoin
 	/// </summary>
 	public class ConcurrentChain : ChainBase
 	{
+		public event EventHandler OnTipChanged;
+
 		public class ChainSerializationFormat
 		{
 			public ChainSerializationFormat()
 			{
 				SerializePrecomputedBlockHash = true;
 				SerializeBlockHeader = true;
+				SerializeCachedChainWork = false;
 			}
 			public bool SerializePrecomputedBlockHash
 			{
@@ -28,6 +31,12 @@ namespace NBitcoin
 			{
 				get; set;
 			}
+
+			public bool SerializeCachedChainWork
+			{
+				get; set;
+			}
+
 			internal void AssertCoherent()
 			{
 				if (!SerializePrecomputedBlockHash && !SerializeBlockHeader)
@@ -188,7 +197,15 @@ namespace NBitcoin
 						BlockHeader header = null;
 						if (format.SerializeBlockHeader)
 							stream.ReadWrite(ref header);
-						if (height == 0)
+						uint256.MutableUint256 work = null;
+						if (format.SerializeCachedChainWork)
+						{
+							bool hasCachedChainWork = false;
+							stream.ReadWrite(ref hasCachedChainWork);
+							if(hasCachedChainWork) stream.ReadWrite(ref work);
+						}
+
+						if(height == 0)
 						{
 							_BlocksByHeight = new ChainedBlock[0];
 							_BlocksById.Clear();
@@ -197,11 +214,16 @@ namespace NBitcoin
 							{
 								throw new InvalidOperationException("Unexpected genesis block");
 							}
-							SetTipNoLock(new ChainedBlock(genesis?.Header ?? header, 0));
+							SetTipNoLock(new ChainedBlock(genesis?.Header ?? header, 0){
+
+								CachedChainWork = work?.Value
+							});
 						}
 						else if (!format.SerializeBlockHeader ||
 								(_Tip.HashBlock == header.HashPrevBlock && !(header.IsNull && header.Nonce == 0)))
-							SetTipNoLock(new ChainedBlock(header, id?.Value, Tip));
+							SetTipNoLock(new ChainedBlock(header, id?.Value, Tip){
+								CachedChainWork = work?.Value
+							});
 						else
 							break;
 						height++;
@@ -247,6 +269,13 @@ namespace NBitcoin
 						stream.ReadWrite(block.HashBlock.AsBitcoinSerializable());
 					if (format.SerializeBlockHeader)
 						stream.ReadWrite(block.Header);
+					if (format.SerializeCachedChainWork)
+					{
+						bool hasChachedChainWork = block.CachedChainWork != null;
+						stream.ReadWrite(ref hasChachedChainWork);
+						if (hasChachedChainWork)
+							stream.ReadWrite(block.CachedChainWork.AsBitcoinSerializable());
+					}
 				}
 			}
 		}
@@ -273,11 +302,14 @@ namespace NBitcoin
 		/// <returns>forking point</returns>
 		public override ChainedBlock SetTip(ChainedBlock block)
 		{
-			using (@lock.LockWrite())
+            ChainedBlock result;
+            using (@lock.LockWrite())
 			{
-				return SetTipNoLock(block);
-			}
-		}
+                result = SetTipNoLock(block);
+            }
+            OnTipChanged?.Invoke(this, EventArgs.Empty);
+            return result;
+        }
 
 		private ChainedBlock SetTipNoLock(ChainedBlock block)
 		{

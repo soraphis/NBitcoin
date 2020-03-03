@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Linq;
+using NBitcoin.BouncyCastle.Math;
 using NBitcoin.DataEncoders;
 
 namespace NBitcoin
@@ -399,6 +400,10 @@ namespace NBitcoin
 			return new uint256(value);
 		}
 
+		public BigInteger ToBigInteger()
+		{
+			return new BigInteger(this.ToBytes(false));
+		}
 
 		public byte[] ToBytes(bool lendian = true)
 		{
@@ -796,6 +801,10 @@ namespace NBitcoin
 			return new uint160(value);
 		}
 
+		public BigInteger ToBigInteger()
+		{
+			return new BigInteger(this.ToBytes(false));
+		}
 
 		public byte[] ToBytes(bool lendian = true)
 		{

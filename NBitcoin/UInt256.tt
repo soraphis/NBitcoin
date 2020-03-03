@@ -8,14 +8,15 @@
 using System;
 using System.Linq;
 using System.IO;
+using NBitcoin.BouncyCastle.Math;
 using NBitcoin.DataEncoders;
 using NBitcoin.Protocol;
 
 namespace NBitcoin
 {
-<# foreach (string t in new []{ "256","160" }) { 
+<# foreach (string t in new []{ "256","160" }) {
 	int WIDTH = int.Parse(t) / 32;
-	int WIDTH_BYTE = int.Parse(t) / 8; 
+	int WIDTH_BYTE = int.Parse(t) / 8;
 #>
 	public class uint<#= t #>
 	{
@@ -64,7 +65,7 @@ namespace NBitcoin
 		}
 
 		static readonly uint<#= t #> _One = new uint<#= t #>(1);
-		public static uint<#= t #> One 
+		public static uint<#= t #> One
 		{
 			get { return _One; }
 		}
@@ -94,7 +95,7 @@ namespace NBitcoin
 			if(hex.Length != WIDTH_BYTE * 2)
 				return false;
 			if(!((HexEncoder)Encoders.Hex).IsValid(hex))
-				return false;			
+				return false;
 			result = new uint<#= t #>(hex);
 			return true;
 		}
@@ -113,7 +114,7 @@ internal readonly UInt32 pn<#= i #>;
 			switch(uintIndex)
 			{
 <# for (int i = 0; i < WIDTH; i++) { #>
-				case <#= i #>: 
+				case <#= i #>:
 					value = pn<#= i #>;
 					break;
 <# } #>
@@ -124,7 +125,7 @@ internal readonly UInt32 pn<#= i #>;
 		}
 
 		public override string ToString()
-		{ 
+		{
 			return Encoder.EncodeData(ToBytes().Reverse().ToArray());
 		}
 
@@ -149,7 +150,7 @@ internal readonly UInt32 pn<#= i #>;
 
 <# for (int i = 0; i < WIDTH; i++) { #>
 			pn<#= i #> = Utils.ToUInt32(vch, 4 * <#= i #>, true);
-<# } #>	
+<# } #>
 		}
 
 		public uint<#= t #>(string str)
@@ -167,7 +168,7 @@ str = str.Trim();
 					throw new FormatException("Invalid hex length");
 			<# for (int i = 0; i < WIDTH; i++) { #>
 			pn<#= i #> = Utils.ToUInt32(bytes, 4 * <#= i #>, true);
-<# } #>	
+<# } #>
 		}
 
 		public uint<#= t #>(byte[] vch)
@@ -180,7 +181,7 @@ str = str.Trim();
 			var item = obj as uint<#= t #>;
 			if(item == null)
 				return false;
-			bool equals = true;		
+			bool equals = true;
 		<# for (int i = 0; i < WIDTH; i++) { #>
 	equals &= pn<#= i #> == item.pn<#= i #>;
 		<# } #>
@@ -194,7 +195,7 @@ str = str.Trim();
 			if(((object)a == null) || ((object)b == null))
 				return false;
 
-			bool equals = true;		
+			bool equals = true;
 		<# for (int i = 0; i < WIDTH; i++) { #>
 	equals &= a.pn<#= i #> == b.pn<#= i #>;
 		<# } #>
@@ -252,7 +253,11 @@ str = str.Trim();
 			return new uint<#= t #>(value);
 		}
 
-		
+		public BigInteger ToBigInteger()
+		{
+			return new BigInteger(this.ToBytes(false));
+		}
+
 		public byte[] ToBytes(bool lendian = true)
 		{
 			var arr = new byte[WIDTH_BYTE];
@@ -268,7 +273,7 @@ str = str.Trim();
 		{
 			return new MutableUint<#= t #>(this);
 		}
-		
+
 		public int GetSerializeSize(int nType=0, uint? protocolVersion = null)
 		{
 			return WIDTH_BYTE;
